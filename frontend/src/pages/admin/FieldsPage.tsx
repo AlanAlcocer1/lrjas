@@ -114,7 +114,7 @@ export default function FieldsPage() {
                             <div>
                               <h3 className="font-medium">{field.label}</h3>
                               <p className="text-xs text-muted-foreground mt-0.5">Checkbox · {field.name}</p>
-                              <div className="flex gap-2 mt-2">
+                              <div className="flex gap-2 mt-2 flex-wrap">
                                 {field.required && <Badge variant="outline">Obligatorio</Badge>}
                                 {!field.active && <Badge variant="destructive">Inactivo</Badge>}
                               </div>

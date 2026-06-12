@@ -43,7 +43,6 @@ async function main() {
 
   const fieldDefs = [
     { name: 'ex_misionero', label: 'Ex Misionero', required: false },
-    { name: 'primera_vez', label: 'Primera vez asistiendo', required: false },
     { name: 'instituto', label: 'Participa en Instituto', required: false },
     { name: 'recomendacion', label: 'Tiene recomendación vigente', required: false },
   ];
@@ -61,6 +60,11 @@ async function main() {
       },
     });
   }
+
+  await prisma.fieldDefinition.updateMany({
+    where: { name: 'primera_vez' },
+    data: { active: false },
+  });
 
   console.log('Seed completed successfully');
 }
