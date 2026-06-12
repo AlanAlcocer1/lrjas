@@ -1,75 +1,95 @@
 # LRJAS — Lugar de Reunión de Jóvenes Adultos Solteros
 
-Aplicación web para gestión de registros y asistencias de participantes en actividades y eventos.
+Aplicación web para gestión de registros y asistencias.
 
-## Stack
+## Despliegue en VPS (DigitalOcean) — recomendado
 
-- **Frontend:** React, TypeScript, Tailwind CSS, shadcn/ui, Framer Motion, React Hook Form, Zod
-- **Backend:** NestJS, TypeScript, Prisma, PostgreSQL, JWT
+Todo en un solo servidor con Docker: frontend + API + PostgreSQL.
 
-## Inicio rápido con Docker
-
-```bash
-docker compose up -d
+```
+Internet → puerto 80/443 → Nginx (web) → /api → Backend (NestJS) → PostgreSQL
+                         └→ React (estático)
 ```
 
-Servicios:
+### 1. Crear Droplet Ubuntu 22/24 en DigitalOcean
 
-| Servicio   | URL                      |
-|-----------|--------------------------|
-| Frontend  | http://localhost:5173    |
-| Backend   | http://localhost:3001/api |
-| PostgreSQL| localhost:5432           |
+- Mínimo **1 GB RAM** (mejor 2 GB)
+- Abre firewall: **HTTP (80)** y **HTTPS (443)**
 
-## Credenciales de administrador
-
-- **Email:** admin@lrjas.com
-- **Contraseña:** admin123
-
-## Desarrollo local (sin Docker)
-
-### Backend
+### 2. Primera vez en el VPS
 
 ```bash
-cd backend
-cp .env.example .env   # o usar .env existente
-npm install
-npx prisma migrate dev
-npx prisma db seed
-npm run start:dev
+# Conectar por SSH
+ssh root@TU_IP
+
+# Clonar proyecto
+git clone https://github.com/TU_USUARIO/lrjas.git /opt/lrjas
+cd /opt/lrjas
+
+# Preparar Docker (solo una vez)
+chmod +x deploy/setup-vps.sh deploy.sh deploy/ssl.sh
+sudo ./deploy/setup-vps.sh
+
+# Configurar variables
+cp .env.prod.example .env
+nano .env   # cambia contraseñas, FRONTEND_URL=https://lrjasmerida.me
+
+# Desplegar
+./deploy.sh
 ```
 
-### Frontend
+Apunta el DNS de `lrjasmerida.me` a la IP del Droplet.
+
+### 3. HTTPS (opcional, después del primer deploy)
 
 ```bash
-cd frontend
-npm install
+sudo ./deploy/ssl.sh lrjasmerida.me tu@email.com
+```
+
+Actualiza `.env`: `FRONTEND_URL=https://lrjasmerida.me` y vuelve a correr `./deploy.sh`.
+
+### 4. Actualizar la app
+
+```bash
+cd /opt/lrjas
+./deploy.sh
+```
+
+El script hace `git pull`, rebuild y `docker compose up -d`.
+
+### Comandos útiles
+
+```bash
+docker compose -f docker-compose.prod.yml logs -f
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml down
+```
+
+### Admin
+
+Usuario maestro (si la BD está vacía): ver `MASTER_USER_*` en `.env`.
+
+---
+
+## Desarrollo local
+
+```bash
+npm run install:all
 npm run dev
 ```
 
-## Módulos
+| Servicio | URL |
+|----------|-----|
+| Frontend | http://localhost:5173 |
+| Backend | http://localhost:3001/api |
 
-1. **Registro de participantes** — Formulario dinámico con campos personalizables
-2. **Código personal** — Generación automática de código único (000-999)
-3. **QR personal** — Credencial visual descargable
-4. **Check-in** — Escaneo QR y código manual
-5. **Dashboard** — KPIs y gráficas
-6. **Gestión de participantes** — Tabla con búsqueda, filtros y paginación
-7. **Configuración de formularios** — Constructor de campos checkbox
-8. **Historial de asistencias** — Por participante con fecha, hora y método
+Usa `docker compose up -d` (sin `.prod`) para entorno local con Docker.
 
-## Estructura
+## GitHub Pages (solo frontend estático)
 
-```
-lrjas/
-├── docker-compose.yml
-├── backend/
-│   ├── prisma/
-│   └── src/modules/
-└── frontend/
-    └── src/
-        ├── components/
-        ├── pages/
-        ├── services/
-        └── types/
-```
+Si solo publicas el front en GitHub Pages, el backend debe estar en otro servidor y configurar `VITE_API_URL` en GitHub Actions. Para producción completa, usa el VPS de arriba.
+
+## Stack
+
+- **Frontend:** React, Vite, Tailwind, Nginx
+- **Backend:** NestJS, Prisma, PostgreSQL, JWT

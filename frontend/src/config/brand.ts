@@ -1,3 +1,5 @@
+const base = import.meta.env.BASE_URL;
+
 export const BRAND = {
   colors: {
     leaf: '#84BD31',
@@ -6,8 +8,8 @@ export const BRAND = {
     white: '#FFFFFF',
   },
   images: {
-    imagotipoGreen: '/images/LRJAS%20Imagotipo%20verde.png',
-    imagotipoWhite: '/images/LRJAS%20Imagotipo%20blanco.png',
-    isotipoGreen: '/images/LRJAS%20Isotipo%20verde.png',
+    imagotipoGreen: `${base}images/LRJAS%20Imagotipo%20verde.png`,
+    imagotipoWhite: `${base}images/LRJAS%20Imagotipo%20blanco.png`,
+    isotipoGreen: `${base}images/LRJAS%20Isotipo%20verde.png`,
   },
 } as const;
