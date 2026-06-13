@@ -57,9 +57,12 @@ export function getMexicoWeekBounds(date: Date = new Date()): { start: Date; end
 }
 
 export function getMexicoDayBounds(date: Date = new Date()): { start: Date; end: Date } {
-  const key = mexicoDateKey(date);
-  const start = zonedLocalToUtc(key, 0, 0, 0);
-  const [y, m, d] = key.split('-').map(Number);
+  return getMexicoDayBoundsFromKey(mexicoDateKey(date));
+}
+
+export function getMexicoDayBoundsFromKey(dateKey: string): { start: Date; end: Date } {
+  const start = zonedLocalToUtc(dateKey, 0, 0, 0);
+  const [y, m, d] = dateKey.split('-').map(Number);
   const nextKey = mexicoDateKey(new Date(Date.UTC(y, m - 1, d + 1, 12, 0, 0)));
   const end = zonedLocalToUtc(nextKey, 0, 0, 0);
   return { start, end };

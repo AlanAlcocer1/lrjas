@@ -63,7 +63,7 @@ export const participantsApi = {
   getById: (id: string) => api.get<Participant>(`/participants/${id}`).then((r) => r.data),
   update: (id: string, data: Partial<RegisterFormData & { active: boolean }>) =>
     api.put<Participant>(`/participants/${id}`, data).then((r) => r.data),
-  deactivate: (id: string) => api.patch(`/participants/${id}/deactivate`).then((r) => r.data),
+  remove: (id: string) => api.delete(`/participants/${id}`).then((r) => r.data),
 };
 
 export const attendanceApi = {

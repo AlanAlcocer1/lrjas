@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAttendanceDto } from './dto/attendance.dto';
 import {
   getMexicoDayBounds,
+  getMexicoDayBoundsFromKey,
   getMexicoWeekBounds,
   getMexicoMonthBounds,
   hora_mexico,
@@ -106,8 +107,9 @@ export class AttendanceService {
         });
         break;
       default:
-        bounds = getMexicoDayBounds(refDate);
-        periodLabel = fecha_mexico(refDate);
+        bounds = dateStr ? getMexicoDayBoundsFromKey(dateStr) : getMexicoDayBounds();
+        periodLabel = dateStr ? fecha_mexico(parseMexicoDate(dateStr)) : fecha_mexico();
+        break;
     }
 
     const attendances = await this.prisma.attendance.findMany({

@@ -29,14 +29,21 @@ export default function AttendanceTodayPage() {
   const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const isToday = dateKey === mexicoDateKey();
+
   useEffect(() => {
     fieldsApi.getActive().then(setFields);
   }, []);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (activeDate = dateKey) => {
     setLoading(true);
     try {
-      setData(await attendanceApi.getRange(period, dateKey));
+      const today = mexicoDateKey();
+      if (period === 'day' && activeDate === today) {
+        setData(await attendanceApi.getToday());
+      } else {
+        setData(await attendanceApi.getRange(period, activeDate));
+      }
     } catch {
       toast.error('Error al cargar asistencias');
     } finally {
@@ -47,6 +54,34 @@ export default function AttendanceTodayPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const selectPeriod = (p: Period) => {
+    if (p === 'day') {
+      const today = mexicoDateKey();
+      setDateKey(today);
+      setPeriod(p);
+      return;
+    }
+    setPeriod(p);
+  };
+
+  const goToToday = () => {
+    const today = mexicoDateKey();
+    setDateKey(today);
+    if (period === 'day') {
+      void load(today);
+    }
+  };
+
+  const refresh = () => {
+    if (period === 'day') {
+      const today = mexicoDateKey();
+      setDateKey(today);
+      void load(today);
+      return;
+    }
+    void load();
+  };
 
   const exportExcel = () => {
     if (!data?.items.length) {
@@ -89,7 +124,7 @@ export default function AttendanceTodayPage() {
                     <FileSpreadsheet className="h-4 w-4" />
                     Excel
                   </Button>
-                  <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-2">
+                  <Button variant="outline" size="sm" onClick={refresh} disabled={loading} className="gap-2">
                     <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
                     Actualizar
                   </Button>
@@ -104,7 +139,7 @@ export default function AttendanceTodayPage() {
                       variant={period === p ? 'default' : 'ghost'}
                       size="sm"
                       className="flex-1"
-                      onClick={() => setPeriod(p)}
+                      onClick={() => selectPeriod(p)}
                     >
                       {periodLabels[p]}
                     </Button>
@@ -113,9 +148,14 @@ export default function AttendanceTodayPage() {
                 <Input
                   type="date"
                   value={dateKey}
-                  onChange={(e) => setDateKey(e.target.value)}
+                  onChange={(e) => setDateKey(e.target.value || mexicoDateKey())}
                   className="sm:max-w-[180px]"
                 />
+                {period === 'day' && !isToday && (
+                  <Button variant="outline" size="sm" onClick={goToToday}>
+                    Hoy
+                  </Button>
+                )}
               </div>
             </div>
           </FadeIn>

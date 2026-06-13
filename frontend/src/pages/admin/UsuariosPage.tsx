@@ -4,7 +4,7 @@ import {
   Search,
   Eye,
   Pencil,
-  UserX,
+  Trash2,
   History,
   ChevronLeft,
   ChevronRight,
@@ -48,6 +48,8 @@ export default function UsuariosPage() {
   const [selected, setSelected] = useState<Participant | null>(null);
   const [history, setHistory] = useState<{ id: string; method: string; createdAt: string }[]>([]);
   const [dialogMode, setDialogMode] = useState<'view' | 'edit' | 'history' | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Participant | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [editForm, setEditForm] = useState({
     firstName: '',
     middleName: '',
@@ -115,10 +117,19 @@ export default function UsuariosPage() {
     setDialogMode('history');
   };
 
-  const deactivate = async (p: Participant) => {
-    await participantsApi.deactivate(p.id);
-    toast.success('Usuario desactivado');
-    load();
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await participantsApi.remove(deleteTarget.id);
+      toast.success('Usuario eliminado');
+      setDeleteTarget(null);
+      load();
+    } catch {
+      toast.error('No se pudo eliminar el usuario');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const saveEdit = async () => {
@@ -266,11 +277,9 @@ export default function UsuariosPage() {
                                   <Button variant="ghost" size="icon" onClick={() => openHistory(p)}>
                                     <History className="h-4 w-4" />
                                   </Button>
-                                  {p.active && (
-                                    <Button variant="ghost" size="icon" onClick={() => deactivate(p)}>
-                                      <UserX className="h-4 w-4 text-red-400" />
-                                    </Button>
-                                  )}
+                                  <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(p)}>
+                                    <Trash2 className="h-4 w-4 text-red-400" />
+                                  </Button>
                                 </div>
                               </td>
                             </motion.tr>
@@ -415,6 +424,43 @@ export default function UsuariosPage() {
                   </div>
                 ))
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <Trash2 className="h-5 w-5" />
+                Eliminar usuario
+              </DialogTitle>
+              <DialogDescription asChild>
+                <div className="space-y-3 pt-2 text-sm text-muted-foreground">
+                  <p>
+                    ¿Seguro que quieres eliminar a{' '}
+                    <span className="font-semibold text-foreground">{deleteTarget?.fullName}</span>
+                    {' '}(código <span className="font-mono">{deleteTarget?.code}</span>)?
+                  </p>
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-foreground">
+                    <p className="font-medium text-destructive mb-1">Esta acción no se puede deshacer</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Se borrará el usuario de forma permanente</li>
+                      <li>Se eliminarán todas sus asistencias</li>
+                      <li>Se borrarán sus respuestas del formulario</li>
+                    </ul>
+                  </div>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-2">
+              <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" onClick={confirmDelete} disabled={deleting} className="gap-2">
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Sí, eliminar
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

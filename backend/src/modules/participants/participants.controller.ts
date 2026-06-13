@@ -3,7 +3,7 @@ import {
   Get,
   Post,
   Put,
-  Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -49,9 +49,9 @@ export class ParticipantsController {
     return this.participantsService.update(id, dto);
   }
 
-  @Patch(':id/deactivate')
+  @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  deactivate(@Param('id') id: string) {
-    return this.participantsService.deactivate(id);
+  remove(@Param('id') id: string) {
+    return this.participantsService.remove(id);
   }
 }

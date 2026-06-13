@@ -89,13 +89,6 @@ export default function RegisterPage() {
   }, []);
 
   const onSubmit = async (data: RegisterFormValues) => {
-    for (const field of fields) {
-      if (field.required && !dynamicValues[field.name]) {
-        toast.error(`${field.label} es obligatorio`);
-        return;
-      }
-    }
-
     setSubmitting(true);
     try {
       const participant = await participantsApi.register({
@@ -233,7 +226,7 @@ export default function RegisterPage() {
                             }
                           />
                           <Label htmlFor={field.name} className="font-normal cursor-pointer">
-                            {field.label}{field.required ? ' *' : ''}
+                            {field.label}
                           </Label>
                         </div>
                       ))}

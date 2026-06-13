@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Settings2, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Settings2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge, Skeleton } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,7 @@ export default function FieldsPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ label: '', required: false, active: true });
+  const [form, setForm] = useState({ label: '', active: true });
 
   const load = () => {
     setLoading(true);
@@ -48,12 +48,12 @@ export default function FieldsPage() {
         name: form.label.toLowerCase().replace(/\s+/g, '_'),
         label: form.label,
         type: 'CHECKBOX',
-        required: form.required,
+        required: false,
         active: form.active,
       });
       toast.success('Campo creado');
       setDialogOpen(false);
-      setForm({ label: '', required: false, active: true });
+      setForm({ label: '', active: true });
       load();
     } catch {
       toast.error('Error al crear campo');
@@ -68,11 +68,6 @@ export default function FieldsPage() {
     load();
   };
 
-  const toggleRequired = async (field: FieldDefinition) => {
-    await fieldsApi.update(field.id, { required: !field.required });
-    load();
-  };
-
   return (
     <AdminLayout>
       <PageTransition>
@@ -81,7 +76,9 @@ export default function FieldsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold mb-1">Configuración de formularios</h1>
-                <p className="text-sm text-muted-foreground">Administra campos dinámicos del registro</p>
+                <p className="text-sm text-muted-foreground">
+                  Checkboxes opcionales: marcado = Sí, sin marcar = No
+                </p>
               </div>
               <Button onClick={() => setDialogOpen(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -114,21 +111,14 @@ export default function FieldsPage() {
                             <div>
                               <h3 className="font-medium">{field.label}</h3>
                               <p className="text-xs text-muted-foreground mt-0.5">Checkbox · {field.name}</p>
-                              <div className="flex gap-2 mt-2 flex-wrap">
-                                {field.required && <Badge variant="outline">Obligatorio</Badge>}
-                                {!field.active && <Badge variant="destructive">Inactivo</Badge>}
-                              </div>
+                              {!field.active && (
+                                <Badge variant="destructive" className="mt-2">Inactivo</Badge>
+                              )}
                             </div>
                           </div>
-                          <div className="flex flex-col gap-3 items-end">
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground">Activo</Label>
-                              <Switch checked={field.active} onCheckedChange={() => toggleActive(field)} />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground">Obligatorio</Label>
-                              <Switch checked={field.required} onCheckedChange={() => toggleRequired(field)} />
-                            </div>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs text-muted-foreground">Activo</Label>
+                            <Switch checked={field.active} onCheckedChange={() => toggleActive(field)} />
                           </div>
                         </div>
                       </CardContent>
@@ -144,20 +134,18 @@ export default function FieldsPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Agregar campo</DialogTitle>
-              <DialogDescription>Crea un nuevo checkbox para el formulario de registro</DialogDescription>
+              <DialogDescription>
+                Pregunta de Sí/No. El usuario puede dejarlo sin marcar.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Nombre del campo</Label>
                 <Input
-                  placeholder="Ej: Ex Misionero"
+                  placeholder="Ej: Miembro"
                   value={form.label}
                   onChange={(e) => setForm({ ...form, label: e.target.value })}
                 />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label>Obligatorio</Label>
-                <Switch checked={form.required} onCheckedChange={(v) => setForm({ ...form, required: v })} />
               </div>
               <div className="flex items-center justify-between">
                 <Label>Activo</Label>

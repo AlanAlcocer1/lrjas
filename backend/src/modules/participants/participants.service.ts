@@ -234,7 +234,12 @@ export class ParticipantsService {
     return this.findOne(id);
   }
 
-  async deactivate(id: string) {
-    return this.update(id, { active: false });
+  async remove(id: string) {
+    await this.findOne(id);
+    await this.prisma.$transaction([
+      this.prisma.attendance.deleteMany({ where: { participantId: id } }),
+      this.prisma.participant.delete({ where: { id } }),
+    ]);
+    return { deleted: true };
   }
 }
