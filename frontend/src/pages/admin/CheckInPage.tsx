@@ -42,7 +42,7 @@ export default function CheckInPage() {
       }
       setTimeout(() => setResult(null), 4000);
     } catch {
-      toast.error('Participante no encontrado');
+      toast.error('Usuario no encontrado');
     } finally {
       setSubmitting(false);
     }

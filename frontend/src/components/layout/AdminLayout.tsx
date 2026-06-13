@@ -9,6 +9,7 @@ import {
   LogOut,
   Menu,
   X,
+  MapPin,
 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,11 +22,12 @@ import type { ReactNode } from 'react';
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/admin/participants', icon: Users, label: 'Participantes' },
+  { to: '/admin/usuarios', icon: Users, label: 'Usuarios' },
   { to: '/admin/check-in', icon: ScanLine, label: 'Check-in' },
   { to: '/admin/attendance-today', icon: CalendarCheck, label: 'Asistencias' },
-  { to: '/admin/users', icon: Shield, label: 'Admins' },
+  { to: '/admin/stakes', icon: MapPin, label: 'Estacas' },
   { to: '/admin/fields', icon: Settings2, label: 'Formularios' },
+  { to: '/admin/users', icon: Shield, label: 'Admins' },
 ];
 
 export function AdminLayout({ children }: { children: ReactNode }) {

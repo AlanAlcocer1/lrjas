@@ -23,7 +23,7 @@ export default function CredentialPage() {
     try {
       setParticipant(await participantsApi.getByCode(c.padStart(3, '0')));
     } catch {
-      toast.error('Participante no encontrado');
+      toast.error('Usuario no encontrado');
       setParticipant(null);
     } finally {
       setLoading(false);

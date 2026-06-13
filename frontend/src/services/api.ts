@@ -8,6 +8,7 @@ import type {
   Participant,
   RegisterFormData,
   Stake,
+  Ward,
   User,
   AdminUser,
   TodayAttendanceResponse,
@@ -32,6 +33,15 @@ export const authApi = {
 
 export const catalogApi = {
   getStakes: () => api.get<Stake[]>('/catalog/stakes').then((r) => r.data),
+  getAllStakes: () => api.get<Stake[]>('/catalog/stakes?all=true').then((r) => r.data),
+  createStake: (name: string) =>
+    api.post<Stake>('/catalog/stakes', { name }).then((r) => r.data),
+  updateStake: (id: string, data: Partial<{ name: string; active: boolean }>) =>
+    api.put<Stake>(`/catalog/stakes/${id}`, data).then((r) => r.data),
+  createWard: (stakeId: string, name: string) =>
+    api.post<Ward>(`/catalog/stakes/${stakeId}/wards`, { name }).then((r) => r.data),
+  updateWard: (id: string, data: Partial<{ name: string; active: boolean }>) =>
+    api.put<Ward>(`/catalog/wards/${id}`, data).then((r) => r.data),
 };
 
 export const fieldsApi = {

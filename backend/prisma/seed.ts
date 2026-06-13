@@ -1,10 +1,40 @@
+import * as bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
-import { upsertMasterUser } from '../src/bootstrap/ensure-master-user';
 
 const prisma = new PrismaClient();
 
+async function upsertMasterUser() {
+  const username = (process.env.MASTER_USER_USERNAME ?? 'alan').toLowerCase().trim();
+  const name = process.env.MASTER_USER_NAME ?? 'Alan';
+  const password = process.env.MASTER_USER_PASSWORD ?? 'Alan2908$';
+
+  await prisma.user.upsert({
+    where: { username },
+    update: { name },
+    create: {
+      username,
+      name,
+      password: await bcrypt.hash(password, 10),
+    },
+  });
+
+  console.log(`Usuario maestro listo: ${username}`);
+}
+
 async function main() {
-  await upsertMasterUser(prisma);
+  await upsertMasterUser();
+
+  const ningunoStake = await prisma.stake.upsert({
+    where: { name: 'Ninguno' },
+    update: { active: true },
+    create: { name: 'Ninguno' },
+  });
+
+  await prisma.ward.upsert({
+    where: { name_stakeId: { name: 'Ninguno', stakeId: ningunoStake.id } },
+    update: { active: true },
+    create: { name: 'Ninguno', stakeId: ningunoStake.id },
+  });
 
   const stakesData = [
     {

@@ -30,11 +30,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { participantsApi, catalogApi, attendanceApi, fieldsApi } from '@/services/api';
+import { isNingunoStake, resolveStakeSelection } from '@/lib/catalog';
 import { exportToExcel, buildDynamicFieldColumns } from '@/lib/export';
 import { formatDate, formatTime } from '@/lib/utils';
 import type { Participant, Stake } from '@/types';
 
-export default function ParticipantsPage() {
+export default function UsuariosPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -116,7 +117,7 @@ export default function ParticipantsPage() {
 
   const deactivate = async (p: Participant) => {
     await participantsApi.deactivate(p.id);
-    toast.success('Participante desactivado');
+    toast.success('Usuario desactivado');
     load();
   };
 
@@ -135,7 +136,7 @@ export default function ParticipantsPage() {
         wardId: editForm.wardId,
         active: editForm.active,
       });
-      toast.success('Participante actualizado');
+      toast.success('Usuario actualizado');
       setDialogMode(null);
       load();
     } catch {
@@ -170,7 +171,7 @@ export default function ParticipantsPage() {
           Registro: formatDate(p.createdAt),
           ...buildDynamicFieldColumns(fields, p.dynamicFields),
         })),
-        `participantes-lrjas-${new Date().toISOString().slice(0, 10)}`,
+        `usuarios-lrjas-${new Date().toISOString().slice(0, 10)}`,
       );
       toast.success('Excel descargado');
     } catch {
@@ -189,7 +190,7 @@ export default function ParticipantsPage() {
           <FadeIn>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold mb-1">Participantes</h1>
+                <h1 className="text-2xl font-bold mb-1">Usuarios</h1>
                 <p className="text-sm text-muted-foreground">{total} registrados</p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -220,8 +221,8 @@ export default function ParticipantsPage() {
                 ) : participants.length === 0 ? (
                   <EmptyState
                     icon={Users}
-                    title="Sin participantes"
-                    description="No se encontraron participantes con esos criterios"
+                    title="Sin usuarios"
+                    description="No se encontraron usuarios con esos criterios"
                   />
                 ) : (
                   <>
@@ -299,7 +300,7 @@ export default function ParticipantsPage() {
         <Dialog open={dialogMode === 'view'} onOpenChange={() => setDialogMode(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Detalle del participante</DialogTitle>
+              <DialogTitle>Detalle del usuario</DialogTitle>
             </DialogHeader>
             {selected && (
               <div className="space-y-3 text-sm">
@@ -318,7 +319,7 @@ export default function ParticipantsPage() {
         <Dialog open={dialogMode === 'edit'} onOpenChange={() => setDialogMode(null)}>
           <DialogContent className="max-h-[90dvh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Editar participante</DialogTitle>
+              <DialogTitle>Editar usuario</DialogTitle>
               <DialogDescription>Código {selected?.code}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -360,7 +361,10 @@ export default function ParticipantsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Estaca</Label>
-                <Select value={editForm.stakeId} onValueChange={(v) => setEditForm({ ...editForm, stakeId: v, wardId: '' })}>
+                <Select
+                  value={editForm.stakeId}
+                  onValueChange={(v) => setEditForm({ ...editForm, ...resolveStakeSelection(v, stakes) })}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {stakes.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -369,7 +373,11 @@ export default function ParticipantsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Barrio</Label>
-                <Select value={editForm.wardId} onValueChange={(v) => setEditForm({ ...editForm, wardId: v })} disabled={!editStake}>
+                <Select
+                  value={editForm.wardId}
+                  onValueChange={(v) => setEditForm({ ...editForm, wardId: v })}
+                  disabled={!editStake || isNingunoStake(editStake)}
+                >
                   <SelectTrigger><SelectValue placeholder="Selecciona barrio" /></SelectTrigger>
                   <SelectContent>
                     {editStake?.wards.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}

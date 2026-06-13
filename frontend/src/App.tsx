@@ -7,11 +7,12 @@ import SuccessPage from '@/pages/SuccessPage';
 import CredentialPage from '@/pages/CredentialPage';
 import LoginPage from '@/pages/admin/LoginPage';
 import DashboardPage from '@/pages/admin/DashboardPage';
-import ParticipantsPage from '@/pages/admin/ParticipantsPage';
+import UsuariosPage from '@/pages/admin/UsuariosPage';
 import CheckInPage from '@/pages/admin/CheckInPage';
 import AttendanceTodayPage from '@/pages/admin/AttendanceTodayPage';
 import UsersPage from '@/pages/admin/UsersPage';
 import FieldsPage from '@/pages/admin/FieldsPage';
+import StakesPage from '@/pages/admin/StakesPage';
 
 export default function App() {
   return (
@@ -24,11 +25,13 @@ export default function App() {
           <Route path="/credential" element={<CredentialPage />} />
           <Route path="/admin/login" element={<LoginPage />} />
           <Route path="/admin" element={<DashboardPage />} />
-          <Route path="/admin/participants" element={<ParticipantsPage />} />
+          <Route path="/admin/usuarios" element={<UsuariosPage />} />
+          <Route path="/admin/participants" element={<UsuariosPage />} />
           <Route path="/admin/check-in" element={<CheckInPage />} />
           <Route path="/admin/attendance-today" element={<AttendanceTodayPage />} />
           <Route path="/admin/users" element={<UsersPage />} />
           <Route path="/admin/fields" element={<FieldsPage />} />
+          <Route path="/admin/stakes" element={<StakesPage />} />
         </Routes>
       </AnimatePresence>
     </AuthProvider>

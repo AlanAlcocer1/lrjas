@@ -33,8 +33,8 @@ export class AttendanceService {
       include: { stake: true, ward: true },
     });
 
-    if (!participant) throw new NotFoundException('Participante no encontrado');
-    if (!participant.active) throw new BadRequestException('Participante inactivo');
+    if (!participant) throw new NotFoundException('Usuario no encontrado');
+    if (!participant.active) throw new BadRequestException('Usuario inactivo');
 
     const { start, end } = getMexicoDayBounds();
 

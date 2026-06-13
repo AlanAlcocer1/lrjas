@@ -3,6 +3,7 @@ export type Sex = 'MALE' | 'FEMALE';
 export interface Stake {
   id: string;
   name: string;
+  active?: boolean;
   wards: Ward[];
 }
 
@@ -10,6 +11,7 @@ export interface Ward {
   id: string;
   name: string;
   stakeId?: string;
+  active?: boolean;
 }
 
 export interface FieldDefinition {

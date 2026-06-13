@@ -176,7 +176,7 @@ export class ParticipantsService {
       },
     });
 
-    if (!participant) throw new NotFoundException('Participante no encontrado');
+    if (!participant) throw new NotFoundException('Usuario no encontrado');
     return this.formatParticipant(participant);
   }
 
@@ -191,7 +191,7 @@ export class ParticipantsService {
       },
     });
 
-    if (!participant) throw new NotFoundException('Participante no encontrado');
+    if (!participant) throw new NotFoundException('Usuario no encontrado');
     return this.formatParticipant(participant);
   }
 

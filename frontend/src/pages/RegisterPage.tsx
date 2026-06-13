@@ -15,6 +15,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { catalogApi, fieldsApi, participantsApi } from '@/services/api';
+import {
+  findNingunoStake,
+  getNingunoWardId,
+  isNingunoStake,
+  resolveStakeSelection,
+} from '@/lib/catalog';
 import type { FieldDefinition, Stake } from '@/types';
 
 const baseSchema = z.object({
@@ -71,6 +77,12 @@ export default function RegisterPage() {
         const defaults: Record<string, boolean> = {};
         f.forEach((field) => { defaults[field.name] = false; });
         setDynamicValues(defaults);
+
+        const ninguno = findNingunoStake(s);
+        if (ninguno) {
+          form.setValue('stakeId', ninguno.id);
+          form.setValue('wardId', getNingunoWardId(ninguno));
+        }
       })
       .catch(() => toast.error('Error al cargar datos'))
       .finally(() => setLoading(false));
@@ -108,7 +120,7 @@ export default function RegisterPage() {
         <FadeIn>
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="text-xl">Registro de participante</CardTitle>
+              <CardTitle className="text-xl">Registro de usuario</CardTitle>
               <CardDescription>Completa tus datos para obtener tu código personal</CardDescription>
             </CardHeader>
             <CardContent>
@@ -174,8 +186,9 @@ export default function RegisterPage() {
                     <Select
                       value={stakeId}
                       onValueChange={(v) => {
-                        form.setValue('stakeId', v);
-                        form.setValue('wardId', '');
+                        const { stakeId: nextStakeId, wardId } = resolveStakeSelection(v, stakes);
+                        form.setValue('stakeId', nextStakeId);
+                        form.setValue('wardId', wardId);
                       }}
                     >
                       <SelectTrigger><SelectValue placeholder="Selecciona tu estaca" /></SelectTrigger>
@@ -192,7 +205,7 @@ export default function RegisterPage() {
                     <Select
                       value={form.watch('wardId')}
                       onValueChange={(v) => form.setValue('wardId', v)}
-                      disabled={!selectedStake}
+                      disabled={!selectedStake || isNingunoStake(selectedStake)}
                     >
                       <SelectTrigger><SelectValue placeholder="Selecciona tu barrio" /></SelectTrigger>
                       <SelectContent>

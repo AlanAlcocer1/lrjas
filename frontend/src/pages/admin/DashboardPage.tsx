@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils';
 const COLORS = ['#84BD31', '#4B7914', '#006837', '#A2C95D', '#5B7235', '#538D4E'];
 
 const kpis = [
-  { key: 'totalParticipants' as const, label: 'Participantes', icon: Users, color: 'text-leaf-dark' },
+  { key: 'totalParticipants' as const, label: 'Usuarios', icon: Users, color: 'text-leaf-dark' },
   { key: 'totalAttendances' as const, label: 'Asistencias', icon: UserCheck, color: 'text-leaf' },
   { key: 'newThisMonth' as const, label: 'Nuevos este mes', icon: UserPlus, color: 'text-leaf-darker' },
   { key: 'activeParticipants' as const, label: 'Activos (30 días)', icon: Activity, color: 'text-amber-600' },
@@ -115,7 +115,7 @@ export default function DashboardPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="min-w-0">
                 <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
-                <p className="text-sm text-muted-foreground">Resumen general de participantes y asistencias</p>
+                <p className="text-sm text-muted-foreground">Resumen general de usuarios y asistencias</p>
               </div>
               <Button
                 variant="outline"
