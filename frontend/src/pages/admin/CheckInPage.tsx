@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { Html5Qrcode } from 'html5-qrcode';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ScanLine, Hash, Camera, CameraOff, CheckCircle2, UserCheck } from 'lucide-react';
+import { ScanLine, Hash, Camera, CameraOff, CheckCircle2, UserCheck, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
@@ -39,7 +39,7 @@ export default function CheckInPage() {
         alreadyRegistered: res.alreadyRegistered,
       });
       if (res.alreadyRegistered) {
-        toast.info('Ya registrado hoy');
+        toast.warning('Usuario ya cuenta con asistencia el día de hoy');
       } else {
         toast.success('Asistencia registrada');
       }
@@ -196,17 +196,23 @@ export default function CheckInPage() {
                   exit={{ opacity: 0, scale: 0.9, y: -20 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                 >
-                  <Card className="border-leaf/30 bg-leaf/5">
+                  <Card className={result.alreadyRegistered ? 'border-amber-500/40 bg-amber-500/5' : 'border-leaf/30 bg-leaf/5'}>
                     <CardContent className="p-8 text-center">
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ type: 'spring', delay: 0.1 }}
                       >
-                        <CheckCircle2 className="h-16 w-16 text-leaf-dark mx-auto mb-4" />
+                        {result.alreadyRegistered ? (
+                          <AlertCircle className="h-16 w-16 text-amber-600 mx-auto mb-4" />
+                        ) : (
+                          <CheckCircle2 className="h-16 w-16 text-leaf-dark mx-auto mb-4" />
+                        )}
                       </motion.div>
                       <p className="text-sm text-muted-foreground mb-1">
-                        {result.alreadyRegistered ? 'Ya registrado hoy' : 'Bienvenido'}
+                        {result.alreadyRegistered
+                          ? 'Usuario ya cuenta con asistencia el día de hoy'
+                          : 'Bienvenido'}
                       </p>
                       <h2 className="text-2xl font-bold mb-2">{result.fullName}</h2>
                       <Badge variant="success" className="text-base px-4 py-1 font-mono">

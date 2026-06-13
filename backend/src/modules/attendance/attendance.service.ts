@@ -49,6 +49,7 @@ export class AttendanceService {
     if (existingToday) {
       return {
         alreadyRegistered: true,
+        message: 'Usuario ya cuenta con asistencia el día de hoy',
         participant: {
           id: participant.id,
           code: participant.code,
@@ -84,14 +85,16 @@ export class AttendanceService {
   }
 
   async getTodayList() {
-    return this.getRangeList('day');
+    return this.getRangeList('day', mexicoDateKey());
   }
 
   async getRangeList(period: 'day' | 'week' | 'month', dateStr?: string) {
     const refDate = dateStr ? parseMexicoDate(dateStr) : new Date();
+    const dayKey = dateStr ?? mexicoDateKey();
 
     let bounds: { start: Date; end: Date };
     let periodLabel: string;
+    let filterDayKey: string | null = null;
 
     switch (period) {
       case 'week':
@@ -107,12 +110,17 @@ export class AttendanceService {
         });
         break;
       default:
-        bounds = dateStr ? getMexicoDayBoundsFromKey(dateStr) : getMexicoDayBounds();
-        periodLabel = dateStr ? fecha_mexico(parseMexicoDate(dateStr)) : fecha_mexico();
+        filterDayKey = dayKey;
+        periodLabel = fecha_mexico(parseMexicoDate(dayKey));
+        bounds = getMexicoDayBoundsFromKey(dayKey);
+        bounds = {
+          start: new Date(bounds.start.getTime() - 6 * 3600000),
+          end: new Date(bounds.end.getTime() + 6 * 3600000),
+        };
         break;
     }
 
-    const attendances = await this.prisma.attendance.findMany({
+    let attendances = await this.prisma.attendance.findMany({
       where: { createdAt: { gte: bounds.start, lt: bounds.end } },
       orderBy: { createdAt: 'asc' },
       include: {
@@ -126,10 +134,14 @@ export class AttendanceService {
       },
     });
 
+    if (filterDayKey) {
+      attendances = attendances.filter((a) => mexicoDateKey(a.createdAt) === filterDayKey);
+    }
+
     return {
       period,
       date: periodLabel,
-      dateKey: dateStr ?? mexicoDateKey(refDate),
+      dateKey: period === 'day' ? dayKey : (dateStr ?? mexicoDateKey(refDate)),
       total: attendances.length,
       items: attendances.map((a) => ({
         id: a.id,

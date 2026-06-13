@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Users,
+  RefreshCw,
   FileSpreadsheet,
   Loader2,
 } from 'lucide-react';
@@ -32,7 +33,7 @@ import { Switch } from '@/components/ui/switch';
 import { participantsApi, catalogApi, attendanceApi, fieldsApi } from '@/services/api';
 import { isNingunoStake, resolveStakeSelection } from '@/lib/catalog';
 import { exportToExcel, buildDynamicFieldColumns } from '@/lib/export';
-import { formatDate, formatTime } from '@/lib/utils';
+import { formatDate, formatTime, cn } from '@/lib/utils';
 import type { Participant, Stake } from '@/types';
 
 export default function UsuariosPage() {
@@ -214,6 +215,10 @@ export default function UsuariosPage() {
                     className="pl-9"
                   />
                 </div>
+                <Button variant="outline" onClick={load} disabled={loading} className="gap-2">
+                  <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+                  Actualizar
+                </Button>
                 <Button variant="outline" onClick={exportExcel} disabled={exporting} className="gap-2">
                   {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
                   Excel

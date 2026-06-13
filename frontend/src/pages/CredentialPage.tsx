@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, CalendarCheck, ScanLine, Hash } from 'lucide-react';
 import { toast } from 'sonner';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
 import { CredentialCard } from '@/components/credential/CredentialCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { participantsApi } from '@/services/api';
+import { formatDate, formatTime } from '@/lib/utils';
 import type { Participant } from '@/types';
 
 export default function CredentialPage() {
@@ -62,7 +65,49 @@ export default function CredentialPage() {
               </Button>
             </div>
 
-            {participant && <CredentialCard participant={participant} />}
+            {participant && (
+              <div className="space-y-6">
+                <CredentialCard participant={participant} />
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <CalendarCheck className="h-5 w-5 text-leaf-dark" />
+                      Mis asistencias
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!participant.attendances?.length ? (
+                      <p className="text-sm text-muted-foreground text-center py-6">
+                        Aún no tienes asistencias registradas
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {participant.attendances.map((a) => (
+                          <div
+                            key={a.id}
+                            className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/60"
+                          >
+                            <div>
+                              <p className="text-sm font-medium">{formatDate(a.createdAt)}</p>
+                              <p className="text-xs text-muted-foreground">{formatTime(a.createdAt)}</p>
+                            </div>
+                            <Badge variant="outline" className="gap-1 shrink-0">
+                              {a.method === 'QR' ? (
+                                <ScanLine className="h-3 w-3" />
+                              ) : (
+                                <Hash className="h-3 w-3" />
+                              )}
+                              {a.method === 'QR' ? 'QR' : 'Manual'}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         </FadeIn>
       </PageTransition>

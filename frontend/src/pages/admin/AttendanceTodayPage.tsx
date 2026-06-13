@@ -35,15 +35,10 @@ export default function AttendanceTodayPage() {
     fieldsApi.getActive().then(setFields);
   }, []);
 
-  const load = useCallback(async (activeDate = dateKey) => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const today = mexicoDateKey();
-      if (period === 'day' && activeDate === today) {
-        setData(await attendanceApi.getToday());
-      } else {
-        setData(await attendanceApi.getRange(period, activeDate));
-      }
+      setData(await attendanceApi.getRange(period, dateKey));
     } catch {
       toast.error('Error al cargar asistencias');
     } finally {
@@ -56,30 +51,15 @@ export default function AttendanceTodayPage() {
   }, [load]);
 
   const selectPeriod = (p: Period) => {
-    if (p === 'day') {
-      const today = mexicoDateKey();
-      setDateKey(today);
-      setPeriod(p);
-      return;
-    }
+    if (p === 'day') setDateKey(mexicoDateKey());
     setPeriod(p);
   };
 
   const goToToday = () => {
-    const today = mexicoDateKey();
-    setDateKey(today);
-    if (period === 'day') {
-      void load(today);
-    }
+    setDateKey(mexicoDateKey());
   };
 
   const refresh = () => {
-    if (period === 'day') {
-      const today = mexicoDateKey();
-      setDateKey(today);
-      void load(today);
-      return;
-    }
     void load();
   };
 
