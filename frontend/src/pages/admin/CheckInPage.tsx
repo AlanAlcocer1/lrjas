@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { flushSync } from 'react-dom';
+import type { Html5Qrcode } from 'html5-qrcode';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScanLine, Hash, Camera, CameraOff, CheckCircle2, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
@@ -10,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { attendanceApi } from '@/services/api';
+import { describeCameraError, startQrScanner, stopQrScanner } from '@/lib/qr-scanner';
 
 interface CheckInResult {
   fullName: string;
@@ -21,9 +23,11 @@ export default function CheckInPage() {
   const [mode, setMode] = useState<'qr' | 'manual'>('manual');
   const [manualCode, setManualCode] = useState('');
   const [scanning, setScanning] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const startingRef = useRef(false);
   const scannerDivId = 'qr-reader';
 
   const registerAttendance = useCallback(async (code: string, method: 'QR' | 'MANUAL') => {
@@ -48,44 +52,57 @@ export default function CheckInPage() {
     }
   }, []);
 
-  const startScanner = async () => {
-    try {
-      const scanner = new Html5Qrcode(scannerDivId);
-      scannerRef.current = scanner;
-      await scanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decoded) => {
-          registerAttendance(decoded.trim(), 'QR');
-          stopScanner();
-        },
-        () => {},
-      );
-      setScanning(true);
-    } catch {
-      toast.error('No se pudo acceder a la cámara');
-    }
-  };
-
-  const stopScanner = async () => {
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current.clear();
-      } catch { /* ignore */ }
-      scannerRef.current = null;
-    }
+  const stopScanner = useCallback(async () => {
+    await stopQrScanner(scannerRef.current);
+    scannerRef.current = null;
+    startingRef.current = false;
     setScanning(false);
-  };
-
-  useEffect(() => {
-    return () => { stopScanner(); };
   }, []);
 
+  const startScanner = useCallback(async () => {
+    if (startingRef.current || scanning) return;
+
+    startingRef.current = true;
+    setCameraError(null);
+
+    try {
+      await stopQrScanner(scannerRef.current);
+      scannerRef.current = null;
+
+      const scanner = await startQrScanner(scannerDivId, (decoded) => {
+        registerAttendance(decoded.trim(), 'QR');
+        void stopScanner();
+      });
+
+      scannerRef.current = scanner;
+      setScanning(true);
+    } catch (error) {
+      console.error('Camera start error:', error);
+      const message = describeCameraError(error);
+      setCameraError(message);
+      toast.error(message);
+      await stopQrScanner(scannerRef.current);
+      scannerRef.current = null;
+      setScanning(false);
+    } finally {
+      startingRef.current = false;
+    }
+  }, [registerAttendance, scanning, stopScanner]);
+
+  const switchToQr = () => {
+    flushSync(() => setMode('qr'));
+    void startScanner();
+  };
+
   useEffect(() => {
-    if (mode === 'qr' && !scanning) startScanner();
-    if (mode === 'manual') stopScanner();
-  }, [mode]);
+    return () => {
+      void stopScanner();
+    };
+  }, [stopScanner]);
+
+  useEffect(() => {
+    if (mode === 'manual') void stopScanner();
+  }, [mode, stopScanner]);
 
   return (
     <AdminLayout>
@@ -101,7 +118,7 @@ export default function CheckInPage() {
               <Button
                 variant={mode === 'qr' ? 'default' : 'ghost'}
                 className="flex-1 gap-2"
-                onClick={() => setMode('qr')}
+                onClick={switchToQr}
               >
                 <ScanLine className="h-4 w-4" />
                 Escanear QR
@@ -118,10 +135,22 @@ export default function CheckInPage() {
 
             {mode === 'qr' && (
               <Card>
-                <CardContent className="p-4">
+                <CardContent className="p-4 space-y-4">
                   <div id={scannerDivId} className="rounded-xl overflow-hidden min-h-[280px] bg-muted" />
-                  <div className="flex justify-center mt-4">
-                    <Button variant="outline" onClick={scanning ? stopScanner : startScanner} className="gap-2">
+                  {!scanning && !cameraError && (
+                    <p className="text-sm text-center text-muted-foreground">
+                      Pulsa Iniciar cámara y acepta el permiso cuando el navegador lo pida.
+                    </p>
+                  )}
+                  {cameraError && (
+                    <p className="text-sm text-center text-red-500">{cameraError}</p>
+                  )}
+                  <div className="flex justify-center">
+                    <Button
+                      variant="outline"
+                      onClick={scanning ? () => void stopScanner() : () => void startScanner()}
+                      className="gap-2"
+                    >
                       {scanning ? <CameraOff className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
                       {scanning ? 'Detener cámara' : 'Iniciar cámara'}
                     </Button>
