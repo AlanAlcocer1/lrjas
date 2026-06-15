@@ -33,6 +33,7 @@ export interface Participant {
   motherLastName: string;
   fullName: string;
   age: number;
+  birthDate: string;
   sex: Sex;
   active: boolean;
   stake: { id: string; name: string };
@@ -95,6 +96,7 @@ export interface FieldDistribution {
 }
 
 export interface DashboardStats {
+  period: { from: string; to: string } | null;
   kpis: {
     totalParticipants: number;
     totalAttendances: number;
@@ -127,9 +129,31 @@ export interface RegisterFormData {
   middleName?: string;
   lastName: string;
   motherLastName: string;
-  age: number;
+  birthDate: string;
   sex: Sex;
   stakeId: string;
   wardId: string;
   dynamicFields?: Record<string, boolean>;
+}
+
+export interface MissingFieldInfo {
+  key: string;
+  label: string;
+  type: 'CHECKBOX' | 'TEXT' | 'SELECT' | 'STAKE' | 'WARD' | string;
+}
+
+export interface ParticipantCompleteness {
+  participantId: string;
+  code: string;
+  fullName: string;
+  complete: boolean;
+  missing: MissingFieldInfo[];
+  profile: {
+    stakeId: string;
+    wardId: string;
+    stake: { id: string; name: string };
+    ward: { id: string; name: string };
+    isMember: boolean;
+    dynamicFields: Record<string, boolean>;
+  };
 }

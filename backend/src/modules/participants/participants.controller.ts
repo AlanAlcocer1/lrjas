@@ -32,6 +32,12 @@ export class ParticipantsController {
     return this.participantsService.findAll(query);
   }
 
+  @Get('code/:code/completeness')
+  @UseGuards(JwtAuthGuard)
+  getCompleteness(@Param('code') code: string) {
+    return this.participantsService.getCompletenessByCode(code);
+  }
+
   @Get('code/:code')
   findByCode(@Param('code') code: string) {
     return this.participantsService.findByCode(code);

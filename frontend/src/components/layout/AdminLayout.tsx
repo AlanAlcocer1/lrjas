@@ -107,9 +107,9 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="lg:hidden glass border-b border-border overflow-hidden"
+              className="lg:hidden glass border-b border-border overflow-hidden max-h-[min(70dvh,calc(100dvh-3.5rem))]"
             >
-              <div className="p-3 space-y-1">
+              <div className="p-3 space-y-1 overflow-y-auto max-h-[inherit]">
                 {navItems.map((item) => (
                   <NavLink key={item.to} {...item} />
                 ))}
@@ -122,11 +122,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           )}
         </AnimatePresence>
 
-        <main className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full min-w-0">{children}</main>
+        <main className="p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 max-w-7xl mx-auto w-full min-w-0">{children}</main>
       </div>
 
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 glass border-t border-border safe-area-pb">
-        <div className="flex justify-around py-2">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 glass border-t border-border pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="flex overflow-x-auto overscroll-x-contain scrollbar-none px-1 py-2 gap-0.5">
           {navItems.map(({ to, icon: Icon, label }) => {
             const active = location.pathname === to;
             return (
@@ -134,12 +134,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                 key={to}
                 to={to}
                 className={cn(
-                  'flex flex-col items-center gap-0.5 px-3 py-1.5 text-[10px] font-medium transition-colors',
-                  active ? 'text-leaf-dark' : 'text-muted-foreground',
+                  'flex shrink-0 flex-col items-center justify-center gap-0.5 min-w-[4.25rem] max-w-[5.5rem] px-2 py-1.5 text-[10px] font-medium transition-colors rounded-lg',
+                  active ? 'text-leaf-dark bg-leaf/10' : 'text-muted-foreground',
                 )}
               >
-                <Icon className={cn('h-5 w-5', active && 'text-leaf')} />
-                {label}
+                <Icon className={cn('h-5 w-5 shrink-0', active && 'text-leaf')} />
+                <span className="truncate w-full text-center leading-tight">{label}</span>
               </Link>
             );
           })}

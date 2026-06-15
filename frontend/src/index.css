@@ -74,6 +74,15 @@ body {
   border: 1px solid rgba(132, 189, 49, 0.18);
 }
 
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 .card-shine {
   position: relative;
   overflow: hidden;

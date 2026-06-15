@@ -53,7 +53,7 @@ export function CredentialCard({ participant, animated = true }: CredentialCardP
           </p>
         </div>
 
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-2">
           <div className="rounded-2xl bg-white p-4 border border-border shadow-sm">
             {loadingQr ? (
               <div className="w-48 h-48 sm:w-56 sm:h-56 flex items-center justify-center">
@@ -66,8 +66,8 @@ export function CredentialCard({ participant, animated = true }: CredentialCardP
         </div>
 
         <div className="text-center mb-6">
-          <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Código personal</p>
-          <p className="text-5xl font-bold font-mono tracking-[0.3em] text-leaf-dark">{participant.code}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Código personal</p>
+          <p className="text-4xl font-bold font-mono tracking-[0.25em] text-leaf-dark leading-none">{participant.code}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">

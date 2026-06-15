@@ -7,6 +7,7 @@ import type {
   PaginatedResponse,
   Participant,
   RegisterFormData,
+  ParticipantCompleteness,
   Stake,
   Ward,
   User,
@@ -60,6 +61,8 @@ export const participantsApi = {
     api.get<PaginatedResponse<Participant>>('/participants', { params }).then((r) => r.data),
   getByCode: (code: string) =>
     api.get<Participant>(`/participants/code/${code}`).then((r) => r.data),
+  getCompleteness: (code: string) =>
+    api.get<ParticipantCompleteness>(`/participants/code/${code}/completeness`).then((r) => r.data),
   getById: (id: string) => api.get<Participant>(`/participants/${id}`).then((r) => r.data),
   update: (id: string, data: Partial<RegisterFormData & { active: boolean }>) =>
     api.put<Participant>(`/participants/${id}`, data).then((r) => r.data),
@@ -91,7 +94,29 @@ export const usersApi = {
 };
 
 export const dashboardApi = {
-  getStats: () => api.get<DashboardStats>('/dashboard/stats').then((r) => r.data),
+  getStats: (params?: { from?: string; to?: string }) =>
+    api.get<DashboardStats>('/dashboard/stats', { params }).then((r) => r.data),
 };
+
+export function getDuplicateRegistrationError(
+  error: unknown,
+): { code: string; fullName: string } | null {
+  if (!axios.isAxiosError(error) || error.response?.status !== 409) return null;
+
+  const data = error.response.data as {
+    message?: string | { message?: string; existingCode?: string; fullName?: string };
+    existingCode?: string;
+    fullName?: string;
+  };
+
+  const payload = typeof data.message === 'object' && data.message !== null ? data.message : data;
+  const code = payload.existingCode;
+  if (!code) return null;
+
+  return {
+    code,
+    fullName: payload.fullName ?? 'Usuario registrado',
+  };
+}
 
 export default api;

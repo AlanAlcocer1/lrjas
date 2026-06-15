@@ -8,8 +8,12 @@ import {
   IsUUID,
   IsObject,
   IsBoolean,
+  IsDateString,
+  Matches,
 } from 'class-validator';
 import { Sex } from '@prisma/client';
+
+const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
 export class CreateParticipantDto {
   @IsString()
@@ -25,10 +29,15 @@ export class CreateParticipantDto {
   @IsString()
   motherLastName: string;
 
+  @IsOptional()
   @IsInt()
   @Min(18)
   @Max(45)
-  age: number;
+  age?: number;
+
+  @IsDateString()
+  @Matches(DATE_KEY, { message: 'birthDate debe ser YYYY-MM-DD' })
+  birthDate: string;
 
   @IsEnum(Sex)
   sex: Sex;
@@ -66,6 +75,11 @@ export class UpdateParticipantDto {
   @Min(18)
   @Max(45)
   age?: number;
+
+  @IsOptional()
+  @IsDateString()
+  @Matches(DATE_KEY, { message: 'birthDate debe ser YYYY-MM-DD' })
+  birthDate?: string;
 
   @IsOptional()
   @IsEnum(Sex)

@@ -22,3 +22,24 @@ export function fecha_mexico(date: Date | string = new Date()): string {
 export function mexicoDateKey(date: Date = new Date()): string {
   return new Date(date).toLocaleDateString('en-CA', { timeZone: TZ });
 }
+
+export function ageFromBirthDateKey(birthDateKey: string, todayKey?: string): number {
+  const today = todayKey ?? mexicoDateKey();
+  const [ty, tm, td] = today.split('-').map(Number);
+  const [by, bm, bd] = birthDateKey.split('-').map(Number);
+  let age = ty - by;
+  if (tm < bm || (tm === bm && td < bd)) age -= 1;
+  return age;
+}
+
+export function maxBirthDateForAge(minAge: number): string {
+  const today = mexicoDateKey();
+  const [y, m, d] = today.split('-').map(Number);
+  return mexicoDateKey(new Date(Date.UTC(y - minAge, m - 1, d, 12, 0, 0)));
+}
+
+export function minBirthDateForAge(maxAge: number): string {
+  const today = mexicoDateKey();
+  const [y, m, d] = today.split('-').map(Number);
+  return mexicoDateKey(new Date(Date.UTC(y - maxAge - 1, m - 1, d + 1, 12, 0, 0)));
+}

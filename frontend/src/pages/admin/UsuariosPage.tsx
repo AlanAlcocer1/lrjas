@@ -28,13 +28,23 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { participantsApi, catalogApi, attendanceApi, fieldsApi } from '@/services/api';
-import { isNingunoStake, resolveStakeSelection } from '@/lib/catalog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MemberStakeSection } from '@/components/forms/MemberStakeSection';
+import { FieldSwitchRow } from '@/components/forms/FieldSwitchRow';
+import { participantsApi, catalogApi, attendanceApi, fieldsApi, getDuplicateRegistrationError } from '@/services/api';
+import { isNingunoStake } from '@/lib/catalog';
+import {
+  applyNingunoStake,
+  inferMemberFromStake,
+  isMemberSelected,
+  splitMemberField,
+  validateMemberStake,
+} from '@/lib/member-field';
 import { exportToExcel, buildDynamicFieldColumns } from '@/lib/export';
 import { formatDate, formatTime, cn } from '@/lib/utils';
-import type { Participant, Stake } from '@/types';
+import { ageFromBirthDateKey, maxBirthDateForAge, minBirthDateForAge } from '@/lib/mexico-time';
+import type { FieldDefinition, Participant, Stake } from '@/types';
 
 export default function UsuariosPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -46,6 +56,7 @@ export default function UsuariosPage() {
   const [exporting, setExporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [stakes, setStakes] = useState<Stake[]>([]);
+  const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [selected, setSelected] = useState<Participant | null>(null);
   const [history, setHistory] = useState<{ id: string; method: string; createdAt: string }[]>([]);
   const [dialogMode, setDialogMode] = useState<'view' | 'edit' | 'history' | null>(null);
@@ -56,12 +67,13 @@ export default function UsuariosPage() {
     middleName: '',
     lastName: '',
     motherLastName: '',
-    age: 18,
+    birthDate: '',
     sex: 'MALE' as 'MALE' | 'FEMALE',
     stakeId: '',
     wardId: '',
     active: true,
   });
+  const [editDynamicFields, setEditDynamicFields] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,7 +94,10 @@ export default function UsuariosPage() {
   }, [search, page]);
 
   useEffect(() => {
-    catalogApi.getStakes().then(setStakes);
+    Promise.all([catalogApi.getStakes(), fieldsApi.getActive()]).then(([s, f]) => {
+      setStakes(s);
+      setFields(f);
+    });
   }, []);
 
   useEffect(() => {
@@ -102,12 +117,20 @@ export default function UsuariosPage() {
       middleName: p.middleName ?? '',
       lastName: p.lastName,
       motherLastName: p.motherLastName,
-      age: p.age,
+      birthDate: p.birthDate,
       sex: p.sex,
       stakeId: p.stake.id,
       wardId: p.ward.id,
       active: p.active,
     });
+    const dynamicDefaults: Record<string, boolean> = { ...(p.dynamicFields ?? {}) };
+    fields.forEach((field) => {
+      dynamicDefaults[field.name] = p.dynamicFields?.[field.name] ?? false;
+    });
+    if (inferMemberFromStake(dynamicDefaults, p.stake.name)) {
+      dynamicDefaults.miembro = true;
+    }
+    setEditDynamicFields(dynamicDefaults);
     setDialogMode('edit');
   };
 
@@ -135,6 +158,24 @@ export default function UsuariosPage() {
 
   const saveEdit = async () => {
     if (!selected) return;
+
+    let submitStakeId = editForm.stakeId;
+    let submitWardId = editForm.wardId;
+
+    if (!isEditMember) {
+      const ninguno = applyNingunoStake(stakes);
+      if (ninguno) {
+        submitStakeId = ninguno.stakeId;
+        submitWardId = ninguno.wardId;
+      }
+    } else {
+      const stakeError = validateMemberStake(stakes, submitStakeId, submitWardId, true);
+      if (stakeError) {
+        toast.error(stakeError);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       await participantsApi.update(selected.id, {
@@ -142,16 +183,22 @@ export default function UsuariosPage() {
         middleName: editForm.middleName.toUpperCase() || undefined,
         lastName: editForm.lastName.toUpperCase(),
         motherLastName: editForm.motherLastName.toUpperCase(),
-        age: editForm.age,
+        birthDate: editForm.birthDate,
         sex: editForm.sex,
-        stakeId: editForm.stakeId,
-        wardId: editForm.wardId,
+        stakeId: submitStakeId,
+        wardId: submitWardId,
         active: editForm.active,
+        dynamicFields: editDynamicFields,
       });
       toast.success('Usuario actualizado');
       setDialogMode(null);
       load();
-    } catch {
+    } catch (err) {
+      const duplicateInfo = getDuplicateRegistrationError(err);
+      if (duplicateInfo) {
+        toast.error(`Ya existe un usuario con ese nombre (código ${duplicateInfo.code})`);
+        return;
+      }
       toast.error('Error al actualizar');
     } finally {
       setSaving(false);
@@ -176,6 +223,7 @@ export default function UsuariosPage() {
           Código: p.code,
           Nombre: p.fullName,
           Edad: p.age,
+          'Fecha de nacimiento': p.birthDate,
           Sexo: p.sex === 'MALE' ? 'Masculino' : 'Femenino',
           Estaca: p.stake.name,
           Barrio: p.ward.name,
@@ -194,6 +242,21 @@ export default function UsuariosPage() {
   };
 
   const editStake = stakes.find((s) => s.id === editForm.stakeId);
+  const editAge = editForm.birthDate ? ageFromBirthDateKey(editForm.birthDate) : null;
+  const { otherFields } = splitMemberField(fields);
+  const isEditMember = inferMemberFromStake(editDynamicFields, editStake?.name ?? '');
+
+  const handleEditMemberChange = (checked: boolean) => {
+    setEditDynamicFields((prev) => ({ ...prev, miembro: checked }));
+    if (!checked) {
+      const ninguno = applyNingunoStake(stakes);
+      if (ninguno) {
+        setEditForm((prev) => ({ ...prev, stakeId: ninguno.stakeId, wardId: ninguno.wardId }));
+      }
+    } else if (isNingunoStake(editStake)) {
+      setEditForm((prev) => ({ ...prev, stakeId: '', wardId: '' }));
+    }
+  };
 
   return (
     <AdminLayout>
@@ -321,10 +384,22 @@ export default function UsuariosPage() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Código</span><span className="font-mono font-bold">{selected.code}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Nombre</span><span>{selected.fullName}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Edad</span><span>{selected.age}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Fecha de nacimiento</span><span>{selected.birthDate}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Sexo</span><span>{selected.sex === 'MALE' ? 'Masculino' : 'Femenino'}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Estaca</span><span>{selected.stake.name}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Barrio</span><span>{selected.ward.name}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Estado</span><span>{selected.active ? 'Activo' : 'Inactivo'}</span></div>
+                {fields.length > 0 && (
+                  <div className="pt-2 border-t border-border space-y-2">
+                    <p className="text-muted-foreground font-medium">Información adicional</p>
+                    {fields.map((field) => (
+                      <div key={field.id} className="flex justify-between">
+                        <span className="text-muted-foreground">{field.label}</span>
+                        <span>{selected.dynamicFields?.[field.name] ? 'Sí' : 'No'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </DialogContent>
@@ -359,8 +434,17 @@ export default function UsuariosPage() {
               </div>
               <div className="grid gap-4 grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Edad</Label>
-                  <Input type="number" min={18} max={45} value={editForm.age} onChange={(e) => setEditForm({ ...editForm, age: Number(e.target.value) })} />
+                  <Label>Fecha de nacimiento</Label>
+                  <Input
+                    type="date"
+                    min={minBirthDateForAge(45)}
+                    max={maxBirthDateForAge(18)}
+                    value={editForm.birthDate}
+                    onChange={(e) => setEditForm({ ...editForm, birthDate: e.target.value })}
+                  />
+                  {editAge !== null && (
+                    <p className="text-xs text-muted-foreground">Edad: {editAge} años</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Sexo</Label>
@@ -373,35 +457,36 @@ export default function UsuariosPage() {
                   </Select>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Estaca</Label>
-                <Select
-                  value={editForm.stakeId}
-                  onValueChange={(v) => setEditForm({ ...editForm, ...resolveStakeSelection(v, stakes) })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {stakes.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Barrio</Label>
-                <Select
-                  value={editForm.wardId}
-                  onValueChange={(v) => setEditForm({ ...editForm, wardId: v })}
-                  disabled={!editStake || isNingunoStake(editStake)}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecciona barrio" /></SelectTrigger>
-                  <SelectContent>
-                    {editStake?.wards.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
+              <MemberStakeSection
+                stakes={stakes}
+                isMember={isEditMember}
+                onMemberChange={handleEditMemberChange}
+                stakeId={editForm.stakeId}
+                wardId={editForm.wardId}
+                onStakeChange={(nextStakeId, nextWardId) =>
+                  setEditForm({ ...editForm, stakeId: nextStakeId, wardId: nextWardId })
+                }
+              />
+              <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
                 <Label>Activo</Label>
                 <Switch checked={editForm.active} onCheckedChange={(v) => setEditForm({ ...editForm, active: v })} />
               </div>
+              {otherFields.length > 0 && (
+                <div className="space-y-3 pt-2 border-t border-border">
+                  <p className="text-sm font-medium">Información adicional</p>
+                  {otherFields.map((field) => (
+                    <FieldSwitchRow
+                      key={field.id}
+                      id={`edit-${field.name}`}
+                      label={field.label}
+                      checked={editDynamicFields[field.name] ?? false}
+                      onCheckedChange={(checked) =>
+                        setEditDynamicFields((prev) => ({ ...prev, [field.name]: checked }))
+                      }
+                    />
+                  ))}
+                </div>
+              )}
               <Button onClick={saveEdit} disabled={saving} className="w-full">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Guardar cambios'}
               </Button>

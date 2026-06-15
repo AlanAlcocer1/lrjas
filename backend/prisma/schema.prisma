@@ -84,6 +84,7 @@ model Participant {
   lastName       String                  @map("last_name")
   motherLastName String                  @map("mother_last_name")
   age            Int
+  birthDate      DateTime @map("birth_date") @db.Date
   sex            Sex
   stakeId        String                  @map("stake_id")
   stake          Stake                   @relation(fields: [stakeId], references: [id])

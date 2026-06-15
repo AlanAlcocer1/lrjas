@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -8,6 +8,8 @@ import {
   TrendingUp,
   FileDown,
   Loader2,
+  CalendarRange,
+  RotateCcw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -29,20 +31,30 @@ import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { dashboardApi } from '@/services/api';
 import { exportDashboardPdf } from '@/lib/dashboard-pdf';
+import { mexicoDateKey } from '@/lib/mexico-time';
 import type { DashboardStats } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 
 const COLORS = ['#84BD31', '#4B7914', '#006837', '#A2C95D', '#5B7235', '#538D4E'];
 
-const kpis = [
-  { key: 'totalParticipants' as const, label: 'Usuarios', icon: Users, color: 'text-leaf-dark' },
-  { key: 'totalAttendances' as const, label: 'Asistencias', icon: UserCheck, color: 'text-leaf' },
+const defaultKpis = [
+  { key: 'totalParticipants' as const, label: 'Usuarios activos', icon: Users, color: 'text-leaf-dark' },
+  { key: 'totalAttendances' as const, label: 'Asistencias totales', icon: UserCheck, color: 'text-leaf' },
   { key: 'newThisMonth' as const, label: 'Nuevos este mes', icon: UserPlus, color: 'text-leaf-darker' },
   { key: 'activeParticipants' as const, label: 'Activos (30 días)', icon: Activity, color: 'text-amber-600' },
+];
+
+const filteredKpis = [
+  { key: 'totalParticipants' as const, label: 'Usuarios activos', icon: Users, color: 'text-leaf-dark' },
+  { key: 'totalAttendances' as const, label: 'Asistencias en periodo', icon: UserCheck, color: 'text-leaf' },
+  { key: 'newThisMonth' as const, label: 'Nuevos registros', icon: UserPlus, color: 'text-leaf-darker' },
+  { key: 'activeParticipants' as const, label: 'Asistieron en periodo', icon: Activity, color: 'text-amber-600' },
 ];
 
 const tooltipStyle = {
@@ -71,22 +83,75 @@ function ChartContainer({
   );
 }
 
+function firstDayOfMonth(): string {
+  const key = mexicoDateKey();
+  const [y, m] = key.split('-');
+  return `${y}-${m}-01`;
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [appliedFrom, setAppliedFrom] = useState<string | undefined>();
+  const [appliedTo, setAppliedTo] = useState<string | undefined>();
   const dashboardRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
   const chartHeight = isMobile ? 220 : 200;
   const pieOuterRadius = isMobile ? 58 : 70;
+  const hasFilter = Boolean(appliedFrom && appliedTo);
+  const kpis = hasFilter ? filteredKpis : defaultKpis;
+
+  const loadStats = useCallback(async (from?: string, to?: string) => {
+    setLoading(true);
+    try {
+      const data = await dashboardApi.getStats(from && to ? { from, to } : undefined);
+      setStats(data);
+    } catch {
+      toast.error('Error al cargar el dashboard');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    dashboardApi
-      .getStats()
-      .then(setStats)
-      .finally(() => setLoading(false));
-  }, []);
+    loadStats();
+  }, [loadStats]);
+
+  const applyFilter = () => {
+    if (!dateFrom || !dateTo) {
+      toast.error('Selecciona fecha inicial y final');
+      return;
+    }
+    if (dateFrom > dateTo) {
+      toast.error('La fecha inicial no puede ser posterior a la final');
+      return;
+    }
+    setAppliedFrom(dateFrom);
+    setAppliedTo(dateTo);
+    loadStats(dateFrom, dateTo);
+  };
+
+  const clearFilter = () => {
+    setDateFrom('');
+    setDateTo('');
+    setAppliedFrom(undefined);
+    setAppliedTo(undefined);
+    loadStats();
+  };
+
+  const setThisMonth = () => {
+    const from = firstDayOfMonth();
+    const to = mexicoDateKey();
+    setDateFrom(from);
+    setDateTo(to);
+    setAppliedFrom(from);
+    setAppliedTo(to);
+    loadStats(from, to);
+  };
 
   const handleExportPdf = async () => {
     if (!dashboardRef.current || !stats) return;
@@ -106,6 +171,8 @@ export default function DashboardPage() {
   };
 
   const animateCharts = !exporting;
+  const attendanceTitle = hasFilter ? 'Asistencias en el periodo' : 'Asistencias por mes';
+  const registrationTitle = hasFilter ? 'Registros en el periodo' : 'Nuevos registros';
 
   return (
     <AdminLayout>
@@ -115,7 +182,11 @@ export default function DashboardPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="min-w-0">
                 <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
-                <p className="text-sm text-muted-foreground">Resumen general de usuarios y asistencias</p>
+                <p className="text-sm text-muted-foreground">
+                  {hasFilter && stats?.period
+                    ? `Reporte del ${formatDate(stats.period.from)} al ${formatDate(stats.period.to)}`
+                    : 'Resumen general de usuarios y asistencias'}
+                </p>
               </div>
               <Button
                 variant="outline"
@@ -130,6 +201,37 @@ export default function DashboardPage() {
             </div>
           </FadeIn>
 
+          <FadeIn delay={0.05}>
+            <Card data-no-export>
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <CalendarRange className="h-4 w-4 text-leaf-dark" />
+                  Filtrar por fechas
+                </div>
+                <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto_auto] sm:items-end">
+                  <div className="space-y-2">
+                    <Label htmlFor="dash-from">Desde</Label>
+                    <Input id="dash-from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dash-to">Hasta</Label>
+                    <Input id="dash-to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                  </div>
+                  <Button onClick={applyFilter} disabled={loading} className="w-full sm:w-auto">
+                    Generar reporte
+                  </Button>
+                  <Button variant="outline" onClick={setThisMonth} disabled={loading} className="w-full sm:w-auto">
+                    Este mes
+                  </Button>
+                  <Button variant="ghost" onClick={clearFilter} disabled={loading || !hasFilter} className="gap-2 w-full sm:w-auto">
+                    <RotateCcw className="h-4 w-4" />
+                    Limpiar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </FadeIn>
+
           <div
             ref={dashboardRef}
             data-dashboard-export
@@ -138,6 +240,12 @@ export default function DashboardPage() {
               exporting && 'min-w-[720px]',
             )}
           >
+            {hasFilter && stats?.period && (
+              <p className="text-sm text-muted-foreground" data-pdf-section>
+                Periodo: {stats.period.from} — {stats.period.to}
+              </p>
+            )}
+
             <div data-pdf-section className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
               {kpis.map((kpi) => (
                 <div key={kpi.key} className="min-w-0">
@@ -168,7 +276,7 @@ export default function DashboardPage() {
             <div className={cn('grid gap-3 sm:gap-4 grid-cols-1', !exporting && 'lg:grid-cols-2')}>
               <Card data-pdf-section className="min-w-0 overflow-hidden">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm sm:text-base">Asistencias por mes</CardTitle>
+                  <CardTitle className="text-sm sm:text-base">{attendanceTitle}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6">
                   <ChartContainer loading={loading} height={chartHeight}>
@@ -195,7 +303,7 @@ export default function DashboardPage() {
 
               <Card data-pdf-section className="min-w-0 overflow-hidden">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm sm:text-base">Nuevos registros</CardTitle>
+                  <CardTitle className="text-sm sm:text-base">{registrationTitle}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6">
                   <ChartContainer loading={loading} height={chartHeight}>

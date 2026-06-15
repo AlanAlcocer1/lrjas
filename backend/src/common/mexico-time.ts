@@ -72,6 +72,35 @@ export function parseMexicoDate(dateKey: string): Date {
   return zonedLocalToUtc(dateKey, 12, 0, 0);
 }
 
+export function ageFromBirthDateKey(birthDateKey: string, todayKey?: string): number {
+  const today = todayKey ?? mexicoDateKey();
+  const [ty, tm, td] = today.split('-').map(Number);
+  const [by, bm, bd] = birthDateKey.split('-').map(Number);
+  let age = ty - by;
+  if (tm < bm || (tm === bm && td < bd)) age--;
+  return age;
+}
+
+export function eachMexicoDateKey(from: string, to: string): string[] {
+  const keys: string[] = [];
+  let current = from;
+  while (current <= to) {
+    keys.push(current);
+    const [y, m, d] = current.split('-').map(Number);
+    const next = mexicoDateKey(new Date(Date.UTC(y, m - 1, d + 1, 12, 0, 0)));
+    current = next;
+  }
+  return keys;
+}
+
+export function registrationBoundsFromMexicoRange(from: string, to: string): { start: Date; end: Date } {
+  const start = zonedLocalToUtc(from, 0, 0, 0);
+  const [y, m, d] = to.split('-').map(Number);
+  const dayAfter = mexicoDateKey(new Date(Date.UTC(y, m - 1, d + 1, 12, 0, 0)));
+  const end = zonedLocalToUtc(dayAfter, 0, 0, 0);
+  return { start, end };
+}
+
 function zonedLocalToUtc(dateKey: string, hour: number, minute: number, second: number): Date {
   const [y, mo, d] = dateKey.split('-').map(Number);
   let utcMs = Date.UTC(y, mo - 1, d, hour, minute, second);
