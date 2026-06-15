@@ -107,6 +107,7 @@ export interface DashboardStats {
     monthlyAttendances: { month: string; count: number }[];
     monthlyRegistrations: { month: string; count: number }[];
     sexDistribution: { sex: string; count: number }[];
+    ageDistribution: { range: string; count: number }[];
     stakeDistribution: { stake: string; count: number }[];
     fieldDistributions: FieldDistribution[];
   };

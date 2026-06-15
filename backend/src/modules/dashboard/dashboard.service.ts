@@ -46,6 +46,7 @@ export class DashboardService {
       monthlyAttendances,
       monthlyRegistrations,
       fieldDistributions,
+      ageDistribution,
     ] = await Promise.all([
       this.prisma.participant.count({ where: { active: true } }),
       this.prisma.attendance.count(),
@@ -71,6 +72,7 @@ export class DashboardService {
       this.getMonthlyAttendances(),
       this.getMonthlyRegistrations(),
       this.getFieldDistributions(),
+      this.getAgeDistribution({ active: true }),
     ]);
 
     const stakes = await this.prisma.stake.findMany();
@@ -96,6 +98,7 @@ export class DashboardService {
           count: s._count.id,
         })),
         fieldDistributions,
+        ageDistribution,
       },
     };
   }
@@ -114,6 +117,7 @@ export class DashboardService {
       periodAttendances,
       periodRegistrations,
       fieldDistributions,
+      ageDistribution,
     ] = await Promise.all([
       this.prisma.participant.count({ where: { active: true } }),
       this.prisma.attendance.count({
@@ -141,6 +145,10 @@ export class DashboardService {
       this.getPeriodAttendances(dateKeys),
       this.getPeriodRegistrations(dateKeys, range),
       this.getFieldDistributions({ regStart, regEnd }),
+      this.getAgeDistribution({
+        active: true,
+        createdAt: { gte: regStart, lt: regEnd },
+      }),
     ]);
 
     const stakes = await this.prisma.stake.findMany();
@@ -166,8 +174,28 @@ export class DashboardService {
           count: s._count.id,
         })),
         fieldDistributions,
+        ageDistribution,
       },
     };
+  }
+
+  private async getAgeDistribution(where: { active?: boolean; createdAt?: { gte: Date; lt: Date } }) {
+    const participants = await this.prisma.participant.findMany({
+      where,
+      select: { age: true },
+    });
+
+    const buckets = [
+      { range: '18-20', min: 18, max: 20 },
+      { range: '20-25', min: 21, max: 25 },
+      { range: '25-30', min: 26, max: 30 },
+      { range: '30-35', min: 31, max: 35 },
+    ];
+
+    return buckets.map(({ range, min, max }) => ({
+      range,
+      count: participants.filter((p) => p.age >= min && p.age <= max).length,
+    }));
   }
 
   private async getFieldDistributions(range?: { regStart: Date; regEnd: Date }) {

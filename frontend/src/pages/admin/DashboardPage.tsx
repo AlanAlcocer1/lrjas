@@ -366,6 +366,30 @@ export default function DashboardPage() {
 
               <Card data-pdf-section className="min-w-0 overflow-hidden">
                 <CardHeader className="pb-2">
+                  <CardTitle className="text-sm sm:text-base">Distribución por edad</CardTitle>
+                </CardHeader>
+                <CardContent className="px-2 sm:px-6">
+                  <ChartContainer loading={loading} height={chartHeight}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={stats?.charts.ageDistribution} margin={{ left: isMobile ? -16 : 0, right: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#dce8cc" />
+                        <XAxis
+                          dataKey="range"
+                          stroke="#5b7235"
+                          fontSize={isMobile ? 10 : 12}
+                          interval={0}
+                        />
+                        <YAxis stroke="#5b7235" fontSize={isMobile ? 10 : 12} width={isMobile ? 28 : 36} allowDecimals={false} />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Bar dataKey="count" fill="#006837" radius={[4, 4, 0, 0]} isAnimationActive={animateCharts} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+
+              <Card data-pdf-section className="min-w-0 overflow-hidden">
+                <CardHeader className="pb-2">
                   <CardTitle className="text-sm sm:text-base">Distribución por estaca</CardTitle>
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6">
