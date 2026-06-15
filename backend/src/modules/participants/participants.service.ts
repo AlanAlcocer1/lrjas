@@ -151,6 +151,24 @@ export class ParticipantsService {
       .join(' ');
   }
 
+  private buildParticipantNameSearchWhere(search: string): Prisma.ParticipantWhereInput {
+    const words = search.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return {};
+
+    const wordMatch = (word: string): Prisma.ParticipantWhereInput => ({
+      OR: [
+        { code: { contains: word, mode: 'insensitive' } },
+        { firstName: { contains: word, mode: 'insensitive' } },
+        { middleName: { contains: word, mode: 'insensitive' } },
+        { lastName: { contains: word, mode: 'insensitive' } },
+        { motherLastName: { contains: word, mode: 'insensitive' } },
+      ],
+    });
+
+    if (words.length === 1) return wordMatch(words[0]);
+    return { AND: words.map((word) => wordMatch(word)) };
+  }
+
   private assertNotDuplicate(
     existing: {
       code: string;
@@ -219,12 +237,7 @@ export class ParticipantsService {
     const where: Prisma.ParticipantWhereInput = {};
 
     if (query.search) {
-      where.OR = [
-        { code: { contains: query.search } },
-        { firstName: { contains: query.search, mode: 'insensitive' } },
-        { lastName: { contains: query.search, mode: 'insensitive' } },
-        { motherLastName: { contains: query.search, mode: 'insensitive' } },
-      ];
+      Object.assign(where, this.buildParticipantNameSearchWhere(query.search));
     }
 
     if (query.stakeId) where.stakeId = query.stakeId;
@@ -289,15 +302,7 @@ export class ParticipantsService {
     }
 
     const matches = await this.prisma.participant.findMany({
-      where: {
-        OR: [
-          { code: { contains: trimmed } },
-          { firstName: { contains: trimmed, mode: 'insensitive' } },
-          { middleName: { contains: trimmed, mode: 'insensitive' } },
-          { lastName: { contains: trimmed, mode: 'insensitive' } },
-          { motherLastName: { contains: trimmed, mode: 'insensitive' } },
-        ],
-      },
+      where: this.buildParticipantNameSearchWhere(trimmed),
       take: 15,
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
       include: this.participantInclude,

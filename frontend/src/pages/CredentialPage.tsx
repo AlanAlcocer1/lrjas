@@ -87,7 +87,7 @@ export default function CredentialPage() {
 
             <div className="flex gap-2">
               <Input
-                placeholder="Código (ej: 123) o nombre"
+                placeholder="Código o nombre completo"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value.toUpperCase())}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
