@@ -51,10 +51,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
   if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
 
-  const navItems =
-    user?.username?.toLowerCase() === '000'
-      ? [...baseNavItems, devNavItem]
-      : baseNavItems;
+  const navItems = user?.devConsole ? [...baseNavItems, devNavItem] : baseNavItems;
 
   const NavLink = ({ to, icon: Icon, label }: (typeof navItems)[0]) => {
     const active = location.pathname === to;
