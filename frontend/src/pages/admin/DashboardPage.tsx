@@ -44,17 +44,17 @@ import { cn, formatDate } from '@/lib/utils';
 const COLORS = ['#84BD31', '#4B7914', '#006837', '#A2C95D', '#5B7235', '#538D4E'];
 
 const defaultKpis = [
-  { key: 'totalParticipants' as const, label: 'Usuarios activos', icon: Users, color: 'text-leaf-dark' },
-  { key: 'totalAttendances' as const, label: 'Asistencias totales', icon: UserCheck, color: 'text-leaf' },
-  { key: 'newThisMonth' as const, label: 'Nuevos este mes', icon: UserPlus, color: 'text-leaf-darker' },
-  { key: 'activeParticipants' as const, label: 'Activos (30 días)', icon: Activity, color: 'text-amber-600' },
+  { key: 'totalParticipants' as const, label: 'Usuarios en el sistema', icon: Users, color: 'text-leaf-dark', hint: 'Cuentas activas registradas' },
+  { key: 'totalAttendances' as const, label: 'Asistencias totales', icon: UserCheck, color: 'text-leaf', hint: 'Check-ins acumulados' },
+  { key: 'newThisMonth' as const, label: 'Nuevos usuarios (mes)', icon: UserPlus, color: 'text-leaf-darker', hint: 'Registros de cuenta este mes' },
+  { key: 'activeParticipants' as const, label: 'Asistieron (30 días)', icon: Activity, color: 'text-amber-600', hint: 'Personas distintas con al menos 1 check-in' },
 ];
 
 const filteredKpis = [
-  { key: 'totalParticipants' as const, label: 'Usuarios activos', icon: Users, color: 'text-leaf-dark' },
-  { key: 'totalAttendances' as const, label: 'Asistencias en periodo', icon: UserCheck, color: 'text-leaf' },
-  { key: 'newThisMonth' as const, label: 'Nuevos registros', icon: UserPlus, color: 'text-leaf-darker' },
-  { key: 'activeParticipants' as const, label: 'Asistieron en periodo', icon: Activity, color: 'text-amber-600' },
+  { key: 'totalAttendances' as const, label: 'Check-ins en periodo', icon: UserCheck, color: 'text-leaf', hint: 'Total de asistencias registradas' },
+  { key: 'activeParticipants' as const, label: 'Personas que asistieron', icon: Activity, color: 'text-amber-600', hint: 'Usuarios distintos con check-in' },
+  { key: 'newThisMonth' as const, label: 'Nuevos usuarios', icon: UserPlus, color: 'text-leaf-darker', hint: 'Cuentas creadas en el periodo (no check-ins)' },
+  { key: 'totalParticipants' as const, label: 'Usuarios en el sistema', icon: Users, color: 'text-leaf-dark', hint: 'Total de cuentas activas (referencia)' },
 ];
 
 const tooltipStyle = {
@@ -171,8 +171,9 @@ export default function DashboardPage() {
   };
 
   const animateCharts = !exporting;
-  const attendanceTitle = hasFilter ? 'Asistencias en el periodo' : 'Asistencias por mes';
-  const registrationTitle = hasFilter ? 'Registros en el periodo' : 'Nuevos registros';
+  const attendanceTitle = hasFilter ? 'Check-ins en el periodo' : 'Asistencias por mes';
+  const registrationTitle = hasFilter ? 'Nuevos usuarios en el periodo' : 'Nuevos usuarios por mes';
+  const distributionSuffix = hasFilter ? ' (quienes asistieron)' : '';
 
   return (
     <AdminLayout>
@@ -267,6 +268,9 @@ export default function DashboardPage() {
                         </motion.p>
                       )}
                       <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 leading-tight">{kpi.label}</p>
+                      {'hint' in kpi && (
+                        <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight hidden sm:block">{kpi.hint}</p>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -337,7 +341,7 @@ export default function DashboardPage() {
 
               <Card data-pdf-section className="min-w-0 overflow-hidden">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm sm:text-base">Distribución por sexo</CardTitle>
+                  <CardTitle className="text-sm sm:text-base">Distribución por sexo{distributionSuffix}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6">
                   <ChartContainer loading={loading} height={chartHeight}>
@@ -366,7 +370,7 @@ export default function DashboardPage() {
 
               <Card data-pdf-section className="min-w-0 overflow-hidden">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm sm:text-base">Distribución por edad</CardTitle>
+                  <CardTitle className="text-sm sm:text-base">Distribución por edad{distributionSuffix}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6">
                   <ChartContainer loading={loading} height={chartHeight}>
@@ -390,7 +394,7 @@ export default function DashboardPage() {
 
               <Card data-pdf-section className="min-w-0 overflow-hidden">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm sm:text-base">Distribución por estaca</CardTitle>
+                  <CardTitle className="text-sm sm:text-base">Distribución por estaca{distributionSuffix}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6">
                   <ChartContainer loading={loading} height={Math.max(chartHeight, (stats?.charts.stakeDistribution.length ?? 0) * (isMobile ? 28 : 24) + 40)}>
