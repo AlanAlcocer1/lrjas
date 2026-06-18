@@ -101,6 +101,16 @@ export const dashboardApi = {
     api.get<DashboardStats>('/dashboard/stats', { params }).then((r) => r.data),
 };
 
+export const devApi = {
+  executeSql: (query: string) =>
+    api
+      .post<{ rows: Record<string, unknown>[]; rowCount: number; durationMs: number }>(
+        '/dev/sql',
+        { query },
+      )
+      .then((r) => r.data),
+};
+
 export function getDuplicateRegistrationError(
   error: unknown,
 ): { code: string; fullName: string } | null {

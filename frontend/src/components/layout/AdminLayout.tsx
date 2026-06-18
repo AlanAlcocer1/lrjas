@@ -10,6 +10,7 @@ import {
   Menu,
   X,
   MapPin,
+  Terminal,
 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,7 +21,7 @@ import { Skeleton } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 
-const navItems = [
+const baseNavItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/admin/usuarios', icon: Users, label: 'Usuarios' },
   { to: '/admin/check-in', icon: ScanLine, label: 'Check-in' },
@@ -29,6 +30,8 @@ const navItems = [
   { to: '/admin/fields', icon: Settings2, label: 'Formularios' },
   { to: '/admin/users', icon: Shield, label: 'Admins' },
 ];
+
+const devNavItem = { to: '/admin/dev', icon: Terminal, label: 'Dev SQL' };
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   const { user, loading, logout, isAuthenticated } = useAuth();
@@ -47,6 +50,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   }
 
   if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
+
+  const navItems =
+    user?.username?.toLowerCase() === '000'
+      ? [...baseNavItems, devNavItem]
+      : baseNavItems;
 
   const NavLink = ({ to, icon: Icon, label }: (typeof navItems)[0]) => {
     const active = location.pathname === to;

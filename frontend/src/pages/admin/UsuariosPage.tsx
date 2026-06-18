@@ -52,6 +52,7 @@ export default function UsuariosPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageLimit, setPageLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -84,7 +85,7 @@ export default function UsuariosPage() {
       const res = await participantsApi.getAll({
         search,
         page: String(page),
-        limit: '10',
+        limit: String(pageLimit),
         sortBy: 'createdAt',
         sortOrder: 'desc',
       });
@@ -94,7 +95,7 @@ export default function UsuariosPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, page]);
+  }, [search, page, pageLimit]);
 
   useEffect(() => {
     Promise.all([catalogApi.getStakes(), fieldsApi.getActive()]).then(([s, f]) => {
@@ -389,8 +390,29 @@ export default function UsuariosPage() {
                       </table>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 border-t border-border">
-                      <p className="text-xs text-muted-foreground">Página {page} de {totalPages}</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-t border-border">
+                      <div className="flex items-center gap-3">
+                        <p className="text-xs text-muted-foreground">Página {page} de {totalPages}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Mostrar</span>
+                          <Select
+                            value={String(pageLimit)}
+                            onValueChange={(v) => {
+                              setPageLimit(Number(v));
+                              setPage(1);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-[72px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {[10, 20, 50, 100].map((n) => (
+                                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
                           <ChevronLeft className="h-4 w-4" />
