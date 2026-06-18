@@ -93,11 +93,38 @@ export class DashboardService {
     return { from, to };
   }
 
+  /** Fecha calendario México del created_at — misma lógica que date_mexico en asistencias */
+  private async countRegistrationsByMexicoDateRange(from: string, to: string): Promise<number> {
+    const rows = await this.prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(*)::bigint AS count
+      FROM participants
+      WHERE to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD') >= ${from}
+        AND to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD') <= ${to}
+    `;
+    return Number(rows[0]?.count ?? 0);
+  }
+
+  private async registrationCountsByMexicoDateKeys(
+    from: string,
+    to: string,
+  ): Promise<Map<string, number>> {
+    const rows = await this.prisma.$queryRaw<{ reg_date: string; count: bigint }[]>`
+      SELECT
+        to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD') AS reg_date,
+        COUNT(*)::bigint AS count
+      FROM participants
+      WHERE to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD') >= ${from}
+        AND to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD') <= ${to}
+      GROUP BY 1
+    `;
+    return new Map(rows.map((r) => [r.reg_date, Number(r.count)]));
+  }
+
   private async getDefaultStats() {
     const hasDateMexico = await this.usesDateMexico();
-    const { start: monthStart, end: monthEnd } = getMexicoMonthBounds();
     const thirtyDaysFrom = this.mexicoDateKeyDaysAgo(30);
     const today = mexicoDateKey();
+    const monthFromKey = `${today.split('-')[0]}-${today.split('-')[1]}-01`;
     const attendedWhere = this.attendedInPeriodWhere(thirtyDaysFrom, today, hasDateMexico);
 
     const [
@@ -114,9 +141,7 @@ export class DashboardService {
     ] = await Promise.all([
       this.prisma.participant.count({ where: { active: true } }),
       this.prisma.attendance.count(),
-      this.prisma.participant.count({
-        where: { createdAt: { gte: monthStart, lt: monthEnd } },
-      }),
+      this.countRegistrationsByMexicoDateRange(monthFromKey, today),
       this.prisma.participant.count({ where: attendedWhere }),
       this.prisma.participant.groupBy({
         by: ['sex'],
@@ -129,7 +154,7 @@ export class DashboardService {
         where: { active: true },
       }),
       this.getMonthlyAttendances(hasDateMexico),
-      this.getMonthlyRegistrations(),
+      this.getMonthlyRegistrationsByMexicoDate(),
       this.getFieldDistributions(),
       this.getAgeDistribution({ active: true }),
     ]);
@@ -183,9 +208,7 @@ export class DashboardService {
     ] = await Promise.all([
       this.prisma.participant.count({ where: { active: true } }),
       this.prisma.attendance.count({ where: attendanceWhere }),
-      this.prisma.participant.count({
-        where: { createdAt: { gte: periodStart, lt: periodEnd } },
-      }),
+      this.countRegistrationsByMexicoDateRange(range.from, range.to),
       this.prisma.participant.count({ where: attendedWhere }),
       this.prisma.participant.groupBy({
         by: ['sex'],
@@ -319,19 +342,17 @@ export class DashboardService {
     return months;
   }
 
-  private async getMonthlyRegistrations() {
+  private async getMonthlyRegistrationsByMexicoDate() {
     const months: { month: string; count: number }[] = [];
     const todayKey = mexicoDateKey();
     const [ty, tm] = todayKey.split('-').map(Number);
 
     for (let i = 5; i >= 0; i--) {
       const ref = new Date(Date.UTC(ty, tm - 1 - i, 15, 12, 0, 0));
-      const { start, end } = getMexicoMonthBounds(ref);
-      const count = await this.prisma.participant.count({
-        where: { createdAt: { gte: start, lt: end } },
-      });
+      const { from, to } = this.monthDateRange(ref);
+      const count = await this.countRegistrationsByMexicoDateRange(from, to);
       months.push({
-        month: parseMexicoDateKeyToMonth(mexicoDateKey(start)),
+        month: parseMexicoDateKeyToMonth(from),
         count,
       });
     }
@@ -399,34 +420,22 @@ export class DashboardService {
 
   private async getPeriodRegistrations(dateKeys: string[], range: DashboardDateRange) {
     const useDaily = dateKeys.length <= 31;
-    const { start: regStart, end: regEnd } = registrationBoundsFromMexicoRange(range.from, range.to);
+    const counts = await this.registrationCountsByMexicoDateKeys(range.from, range.to);
 
     if (useDaily) {
-      const rows = await Promise.all(
-        dateKeys.map(async (key) => {
-          const { start, end } = getMexicoDayBoundsFromKey(key);
-          const count = await this.prisma.participant.count({
-            where: { createdAt: { gte: start, lt: end } },
-          });
-          const [, m, d] = key.split('-');
-          return { month: `${d}/${m}`, count };
-        }),
-      );
-      return rows;
+      return dateKeys.map((key) => {
+        const [, m, d] = key.split('-');
+        return { month: `${d}/${m}`, count: counts.get(key) ?? 0 };
+      });
     }
-
-    const participants = await this.prisma.participant.findMany({
-      where: { createdAt: { gte: regStart, lt: regEnd } },
-      select: { createdAt: true },
-    });
 
     const buckets = new Map<string, number>();
     for (const key of dateKeys) {
       buckets.set(parseMexicoDateKeyToMonth(key), 0);
     }
-    for (const p of participants) {
-      const monthLabel = parseMexicoDateKeyToMonth(mexicoDateKey(p.createdAt));
-      buckets.set(monthLabel, (buckets.get(monthLabel) ?? 0) + 1);
+    for (const [regDate, count] of counts) {
+      const monthLabel = parseMexicoDateKeyToMonth(regDate);
+      buckets.set(monthLabel, (buckets.get(monthLabel) ?? 0) + count);
     }
 
     return Array.from(buckets.entries()).map(([month, count]) => ({ month, count }));

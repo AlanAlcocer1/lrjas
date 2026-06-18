@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
+import { isDevConsoleUser } from '../../common/dev-console-access';
 
 @Injectable()
 export class AuthService {
@@ -22,14 +23,22 @@ export class AuthService {
     const payload = { sub: user.id, username: user.username, role: user.role };
     return {
       accessToken: this.jwtService.sign(payload),
-      user: { id: user.id, username: user.username, name: user.name, role: user.role },
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        devConsole: isDevConsoleUser(user.username),
+      },
     };
   }
 
   async validateUser(userId: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, username: true, name: true, role: true },
     });
+    if (!user) return null;
+    return { ...user, devConsole: isDevConsoleUser(user.username) };
   }
 }

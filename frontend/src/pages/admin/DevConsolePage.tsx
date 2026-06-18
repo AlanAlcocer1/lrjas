@@ -34,8 +34,20 @@ WHERE table_name = 'attendances'
 ORDER BY ordinal_position`,
   },
   {
+    label: 'Registros por día (México)',
+    sql: `SELECT
+  to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD') AS reg_date,
+  code, first_name, last_name, created_at
+FROM participants
+WHERE to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD') = '2026-06-17'
+ORDER BY created_at`,
+  },
+  {
     label: 'Registros recientes',
-    sql: `SELECT code, first_name, last_name, created_at
+    sql: `SELECT
+  code, first_name, last_name,
+  to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD') AS reg_mexico,
+  created_at
 FROM participants
 ORDER BY created_at DESC
 LIMIT 20`,
@@ -75,7 +87,7 @@ export default function DevConsolePage() {
 
   const columns = result?.rows.length ? Object.keys(result.rows[0]) : [];
 
-  if (!authLoading && user?.username?.toLowerCase() !== '000') {
+  if (!authLoading && !user?.devConsole) {
     return <Navigate to="/admin" replace />;
   }
 
@@ -90,7 +102,7 @@ export default function DevConsolePage() {
                 Consola SQL
               </h1>
               <p className="text-sm text-muted-foreground">
-                Solo lectura (SELECT). Usuario 000.
+                Solo lectura (SELECT). Usuarios autorizados: alan, 000…
               </p>
             </div>
           </FadeIn>

@@ -118,6 +118,7 @@ export interface User {
   username: string;
   name: string;
   role: string;
+  devConsole?: boolean;
 }
 
 export interface AuthResponse {
