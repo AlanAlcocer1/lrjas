@@ -9,7 +9,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error('Error al cargar imagen'));
-    img.src = src;
+    img.src = src;// nep
   });
 }
 
