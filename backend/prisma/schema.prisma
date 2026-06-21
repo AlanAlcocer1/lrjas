@@ -27,6 +27,11 @@ enum Role {
   ADMIN
 }
 
+enum SocialPlatform {
+  INSTAGRAM
+  FACEBOOK
+}
+
 model User {
   id        String   @id @default(uuid())
   username  String   @unique
@@ -121,4 +126,18 @@ model Attendance {
 
   @@unique([participantId, dateMexico])
   @@map("attendances")
+}
+
+model SocialPost {
+  id        String         @id @default(uuid())
+  title     String
+  postUrl   String         @map("post_url")
+  platform  SocialPlatform @default(INSTAGRAM)
+  active    Boolean        @default(true)
+  featured  Boolean        @default(true)
+  sortOrder Int            @default(0) @map("sort_order")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  @@map("social_posts")
 }

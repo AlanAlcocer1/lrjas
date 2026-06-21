@@ -6,6 +6,7 @@ import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
 import { Logo } from '@/components/brand/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { SocialFollowSection } from '@/components/social/SocialFollowSection';
 import { APP_DESCRIPTION } from '@/config/api';
 
 export default function HomePage() {
@@ -36,6 +37,10 @@ export default function HomePage() {
                 {APP_DESCRIPTION}. Regístrate una vez y accede a todas las actividades con tu código personal.
               </p>
             </div>
+          </FadeIn>
+
+          <FadeIn delay={0.12}>
+            <SocialFollowSection />
           </FadeIn>
 
           <FadeIn delay={0.15}>

@@ -36,6 +36,12 @@ fi
 echo "==> Construyendo imágenes..."
 docker compose "${COMPOSE_ARGS[@]}" build
 
+echo "==> Levantando base de datos..."
+docker compose "${COMPOSE_ARGS[@]}" up -d postgres
+
+echo "==> Aplicando migraciones (Prisma migrate deploy)..."
+docker compose "${COMPOSE_ARGS[@]}" run --rm --no-deps --entrypoint "" backend npx prisma migrate deploy
+
 echo "==> Levantando servicios..."
 docker compose "${COMPOSE_ARGS[@]}" up -d
 

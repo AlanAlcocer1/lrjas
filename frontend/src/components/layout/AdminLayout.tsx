@@ -11,6 +11,7 @@ import {
   X,
   MapPin,
   Terminal,
+  Share2,
 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -28,6 +29,7 @@ const baseNavItems = [
   { to: '/admin/attendance-today', icon: CalendarCheck, label: 'Asistencias' },
   { to: '/admin/stakes', icon: MapPin, label: 'Estacas' },
   { to: '/admin/fields', icon: Settings2, label: 'Formularios' },
+  { to: '/admin/redes', icon: Share2, label: 'Redes' },
   { to: '/admin/users', icon: Shield, label: 'Admins' },
 ];
 
