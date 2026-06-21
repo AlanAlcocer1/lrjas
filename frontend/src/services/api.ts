@@ -122,6 +122,14 @@ export const socialApi = {
   remove: (id: string) => api.delete(`/social/posts/${id}`).then((r) => r.data),
 };
 
+export function getApiErrorMessage(error: unknown, fallback = 'Error inesperado'): string {
+  if (!axios.isAxiosError(error)) return fallback;
+  const data = error.response?.data as { message?: string | string[] };
+  if (Array.isArray(data?.message)) return data.message.join(', ');
+  if (typeof data?.message === 'string') return data.message;
+  return fallback;
+}
+
 export function getDuplicateRegistrationError(
   error: unknown,
 ): { code: string; fullName: string } | null {

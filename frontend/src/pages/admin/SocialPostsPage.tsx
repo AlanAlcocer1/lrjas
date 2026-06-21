@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { socialApi } from '@/services/api';
+import { socialApi, getApiErrorMessage } from '@/services/api';
 import { SocialPostPreview } from '@/components/social/SocialPostPreview';
 import type { SocialPlatform, SocialPost } from '@/types';
 
@@ -100,8 +100,8 @@ export default function SocialPostsPage() {
       }
       setDialogOpen(false);
       load();
-    } catch {
-      toast.error('No se pudo guardar');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'No se pudo guardar'));
     } finally {
       setSubmitting(false);
     }
