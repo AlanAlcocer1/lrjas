@@ -14,6 +14,7 @@ import type {
   User,
   AdminUser,
   TodayAttendanceResponse,
+  SocialPost,
 } from '@/types';
 
 const api = axios.create({
@@ -109,6 +110,16 @@ export const devApi = {
         { query },
       )
       .then((r) => r.data),
+};
+
+export const socialApi = {
+  getFeed: () => api.get<SocialPost[]>('/social/feed').then((r) => r.data),
+  getAll: () => api.get<SocialPost[]>('/social/posts').then((r) => r.data),
+  create: (data: Omit<SocialPost, 'id' | 'createdAt' | 'updatedAt'>) =>
+    api.post<SocialPost>('/social/posts', data).then((r) => r.data),
+  update: (id: string, data: Partial<Omit<SocialPost, 'id' | 'createdAt' | 'updatedAt'>>) =>
+    api.put<SocialPost>(`/social/posts/${id}`, data).then((r) => r.data),
+  remove: (id: string) => api.delete(`/social/posts/${id}`).then((r) => r.data),
 };
 
 export function getDuplicateRegistrationError(

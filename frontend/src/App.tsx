@@ -14,6 +14,7 @@ import UsersPage from '@/pages/admin/UsersPage';
 import FieldsPage from '@/pages/admin/FieldsPage';
 import StakesPage from '@/pages/admin/StakesPage';
 import DevConsolePage from '@/pages/admin/DevConsolePage';
+import SocialPostsPage from '@/pages/admin/SocialPostsPage';
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/admin/attendance-today" element={<AttendanceTodayPage />} />
           <Route path="/admin/users" element={<UsersPage />} />
           <Route path="/admin/fields" element={<FieldsPage />} />
+          <Route path="/admin/redes" element={<SocialPostsPage />} />
           <Route path="/admin/stakes" element={<StakesPage />} />
           <Route path="/admin/dev" element={<DevConsolePage />} />
         </Routes>

@@ -1,5 +1,19 @@
 export type Sex = 'MALE' | 'FEMALE';
 
+export type SocialPlatform = 'INSTAGRAM' | 'FACEBOOK';
+
+export interface SocialPost {
+  id: string;
+  title: string;
+  postUrl: string;
+  platform: SocialPlatform;
+  active: boolean;
+  featured: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Stake {
   id: string;
   name: string;
