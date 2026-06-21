@@ -28,6 +28,7 @@ function WhatsAppIcon({ className }: { className?: string }) {
 const items = [
   {
     key: 'instagram',
+    shortLabel: 'Instagram',
     label: SOCIAL.instagram.label,
     url: SOCIAL.instagram.url,
     Icon: InstagramIcon,
@@ -35,6 +36,7 @@ const items = [
   },
   {
     key: 'facebook',
+    shortLabel: 'Facebook',
     label: SOCIAL.facebook.label,
     url: SOCIAL.facebook.url,
     Icon: FacebookIcon,
@@ -42,6 +44,7 @@ const items = [
   },
   {
     key: 'whatsapp',
+    shortLabel: 'WhatsApp',
     label: SOCIAL.whatsapp.label,
     url: SOCIAL.whatsapp.url,
     Icon: WhatsAppIcon,
@@ -56,28 +59,38 @@ type SocialLinksProps = {
 };
 
 const sizeClasses = {
-  sm: { btn: 'h-10 w-10', icon: 'h-4 w-4', gap: 'gap-2.5', text: 'text-[10px]' },
-  md: { btn: 'h-12 w-12', icon: 'h-5 w-5', gap: 'gap-3', text: 'text-xs' },
-  lg: { btn: 'h-14 w-14', icon: 'h-6 w-6', gap: 'gap-4', text: 'text-sm' },
+  sm: { btn: 'h-10 w-10', icon: 'h-4 w-4', text: 'text-[10px]' },
+  md: { btn: 'h-12 w-12', icon: 'h-5 w-5', text: 'text-xs' },
+  lg: { btn: 'h-14 w-14', icon: 'h-6 w-6', text: 'text-xs' },
 };
 
 export function SocialLinks({ size = 'md', showLabels = false, className }: SocialLinksProps) {
   const s = sizeClasses[size];
 
   return (
-    <div className={cn('flex flex-wrap items-center justify-center', s.gap, className)}>
-      {items.map(({ key, label, url, Icon, className: btnClass }) => (
+    <div
+      className={cn(
+        showLabels
+          ? 'grid grid-cols-3 gap-2 w-full max-w-sm mx-auto'
+          : 'flex flex-wrap items-center justify-center gap-2.5 sm:gap-3',
+        className,
+      )}
+    >
+      {items.map(({ key, shortLabel, label, url, Icon, className: btnClass }) => (
         <a
           key={key}
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className={cn('group flex flex-col items-center gap-1.5 shrink-0')}
+          className={cn(
+            'group flex flex-col items-center justify-start gap-2',
+            showLabels ? 'w-full min-w-0' : 'shrink-0',
+          )}
           aria-label={label}
         >
           <span
             className={cn(
-              'inline-flex items-center justify-center rounded-full border shadow-sm transition-transform active:scale-95',
+              'inline-flex shrink-0 items-center justify-center rounded-full border shadow-sm transition-transform active:scale-95',
               s.btn,
               btnClass,
             )}
@@ -85,8 +98,13 @@ export function SocialLinks({ size = 'md', showLabels = false, className }: Soci
             <Icon className={s.icon} />
           </span>
           {showLabels && (
-            <span className={cn('font-medium text-muted-foreground group-hover:text-foreground', s.text)}>
-              {label}
+            <span
+              className={cn(
+                'w-full text-center font-medium text-muted-foreground group-hover:text-foreground leading-tight',
+                s.text,
+              )}
+            >
+              {shortLabel}
             </span>
           )}
         </a>
