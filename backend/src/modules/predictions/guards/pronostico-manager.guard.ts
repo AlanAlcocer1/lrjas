@@ -7,7 +7,7 @@ export class PronosticoManagerGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<{ user?: { username?: string } }>();
 
     if (!isPronosticoManager(request.user?.username)) {
-      throw new ForbiddenException('Solo los usuarios 000 y 001 pueden editar o eliminar pronósticos');
+      throw new ForbiddenException('Solo los admins autorizados pueden editar o eliminar pronósticos');
     }
 
     return true;

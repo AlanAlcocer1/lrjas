@@ -1,4 +1,4 @@
-const PRONOSTICO_MANAGER_USERNAMES = new Set(['000', '001']);
+const DEFAULT_PRONOSTICO_MANAGER_USERNAMES = new Set(['000', '001', 'alan', 'anahi']);
 
 export function canManagePronosticos(
   username?: string | null,
@@ -6,5 +6,5 @@ export function canManagePronosticos(
 ): boolean {
   if (pronosticoManager) return true;
   if (!username) return false;
-  return PRONOSTICO_MANAGER_USERNAMES.has(username.toLowerCase().trim());
+  return DEFAULT_PRONOSTICO_MANAGER_USERNAMES.has(username.toLowerCase().trim());
 }
