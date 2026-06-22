@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Share2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/badge';
 import { socialApi } from '@/services/api';
+import { SocialLinks } from '@/components/social/SocialLinks';
 import { InstagramEmbed } from '@/components/social/InstagramEmbed';
 import { SocialPostPreview } from '@/components/social/SocialPostPreview';
 import { SOCIAL } from '@/config/social';
@@ -20,18 +22,25 @@ export function SocialFollowSection() {
   }, []);
 
   return (
-    <Card className="border-leaf/15 bg-white/70 backdrop-blur-sm overflow-hidden shadow-sm">
-      <CardContent className="p-3 sm:p-4">
-        <p className="text-[11px] sm:text-xs font-medium text-center text-muted-foreground mb-3 line-clamp-2">
-          {post?.title ?? 'Publicación destacada'}
+    <Card className="border-leaf/20 bg-white/80 backdrop-blur-sm overflow-hidden">
+      <CardHeader className="pb-3 text-center">
+        <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-leaf/10">
+          <Share2 className="h-4 w-4 text-leaf-dark" />
+        </div>
+        <CardTitle className="text-base sm:text-lg">Síguenos en redes</CardTitle>
+        <p className="text-xs text-muted-foreground font-normal mt-1">
+          Avisos, fotos y canal de WhatsApp de LR-JAS Mérida
         </p>
+      </CardHeader>
+      <CardContent className="space-y-5 pt-0">
+        <SocialLinks size="lg" showLabels />
 
         {loading ? (
-          <Skeleton className="h-36 w-full max-w-[260px] mx-auto rounded-lg" />
+          <Skeleton className="h-48 w-full max-w-sm mx-auto rounded-xl" />
         ) : post ? (
-          <SocialPostPreview post={post} compact />
+          <SocialPostPreview post={post} />
         ) : (
-          <InstagramEmbed postUrl={SOCIAL.instagramFeaturedPostUrl} compact />
+          <InstagramEmbed postUrl={SOCIAL.instagramFeaturedPostUrl} />
         )}
       </CardContent>
     </Card>

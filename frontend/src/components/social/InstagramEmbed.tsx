@@ -77,7 +77,7 @@ export function InstagramEmbed({ postUrl, compact }: InstagramEmbedProps) {
       ref={containerRef}
       className={
         compact
-          ? 'w-full max-w-[260px] mx-auto overflow-hidden rounded-lg [&_.instagram-media]:!max-h-[340px] [&_.instagram-media]:!min-h-0'
+          ? 'w-full max-w-[340px] mx-auto rounded-lg'
           : 'w-full max-w-sm mx-auto overflow-hidden rounded-xl'
       }
     >
