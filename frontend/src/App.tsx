@@ -15,6 +15,8 @@ import FieldsPage from '@/pages/admin/FieldsPage';
 import StakesPage from '@/pages/admin/StakesPage';
 import DevConsolePage from '@/pages/admin/DevConsolePage';
 import SocialPostsPage from '@/pages/admin/SocialPostsPage';
+import PronosticosPage from '@/pages/admin/PronosticosPage';
+import PronosticoPage from '@/pages/PronosticoPage';
 
 export default function App() {
   return (
@@ -25,6 +27,7 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/register/success" element={<SuccessPage />} />
           <Route path="/credential" element={<CredentialPage />} />
+          <Route path="/pronostico" element={<PronosticoPage />} />
           <Route path="/admin/login" element={<LoginPage />} />
           <Route path="/admin" element={<DashboardPage />} />
           <Route path="/admin/usuarios" element={<UsuariosPage />} />
@@ -34,6 +37,7 @@ export default function App() {
           <Route path="/admin/users" element={<UsersPage />} />
           <Route path="/admin/fields" element={<FieldsPage />} />
           <Route path="/admin/redes" element={<SocialPostsPage />} />
+          <Route path="/admin/pronosticos" element={<PronosticosPage />} />
           <Route path="/admin/stakes" element={<StakesPage />} />
           <Route path="/admin/dev" element={<DevConsolePage />} />
         </Routes>

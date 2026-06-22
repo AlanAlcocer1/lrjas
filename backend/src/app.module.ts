@@ -10,6 +10,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { UsersModule } from './modules/users/users.module';
 import { DevModule } from './modules/dev/dev.module';
 import { SocialModule } from './modules/social/social.module';
+import { PredictionsModule } from './modules/predictions/predictions.module';
 import { BootstrapService } from './bootstrap/bootstrap.service';
 
 @Module({
@@ -25,6 +26,7 @@ import { BootstrapService } from './bootstrap/bootstrap.service';
     UsersModule,
     DevModule,
     SocialModule,
+    PredictionsModule,
   ],
   providers: [BootstrapService],
 })

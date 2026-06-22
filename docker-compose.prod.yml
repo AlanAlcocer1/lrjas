@@ -32,6 +32,9 @@ services:
       MASTER_USER_USERNAME: ${MASTER_USER_USERNAME:-alan}
       MASTER_USER_NAME: ${MASTER_USER_NAME:-Alan}
       MASTER_USER_PASSWORD: ${MASTER_USER_PASSWORD:?Define MASTER_USER_PASSWORD en .env}
+      PRONOSTICOS_DATA_PATH: /app/data/predictions.json
+    volumes:
+      - ./backend/data:/app/data
     depends_on:
       postgres:
         condition: service_healthy

@@ -133,6 +133,7 @@ export interface User {
   name: string;
   role: string;
   devConsole?: boolean;
+  pronosticoManager?: boolean;
 }
 
 export interface AuthResponse {
@@ -183,4 +184,39 @@ export interface ParticipantCompleteness {
     isMember: boolean;
     dynamicFields: Record<string, boolean>;
   };
+}
+
+export interface TeamRoster {
+  name: string;
+  flag: string;
+  emoji: string;
+  players: Record<string, string[]>;
+}
+
+export interface MatchInfo {
+  title: string;
+  subtitle: string;
+  deadlineLabel: string;
+  deadlineAt: string;
+  isOpen: boolean;
+  deadlinePassed: boolean;
+  mexico: TeamRoster;
+  czech: TeamRoster;
+}
+
+export interface Prediction {
+  id: string;
+  participantCode: string;
+  participantName: string;
+  mexicoScore: number;
+  czechScore: number;
+  mexicoScorers: string[];
+  czechScorers: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PredictionStatus extends MatchInfo {
+  hasPrediction: boolean;
+  prediction: Prediction | null;
 }
