@@ -153,7 +153,7 @@ export default function PronosticosPage() {
               </div>
               {!canManage && (
                 <Badge variant="outline" className="w-fit">
-                  Solo lectura — edición para usuarios 000 y 001
+                  Solo lectura — edición para admins alan, anahi, 000 y 001
                 </Badge>
               )}
             </div>
