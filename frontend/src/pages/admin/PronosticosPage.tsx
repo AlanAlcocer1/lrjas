@@ -16,14 +16,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { OptionalScorersField, trimScorers } from '@/components/pronostico/OptionalScorersField';
 import { predictionsApi, getApiErrorMessage } from '@/services/api';
+import { canManagePronosticos } from '@/lib/pronostico-manager';
 import { formatDate, formatTime } from '@/lib/utils';
 import type { MatchInfo, Prediction } from '@/types';
 
@@ -33,7 +28,7 @@ function flatPlayers(team: MatchInfo['mexico']) {
 
 export default function PronosticosPage() {
   const { user } = useAuth();
-  const canManage = !!user?.pronosticoManager;
+  const canManage = canManagePronosticos(user?.username, user?.pronosticoManager);
 
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [match, setMatch] = useState<MatchInfo | null>(null);
@@ -67,20 +62,17 @@ export default function PronosticosPage() {
   const czechPlayerList = useMemo(() => (match ? flatPlayers(match.czech) : []), [match]);
 
   useEffect(() => {
-    setMexicoScorers((prev) => {
-      const next = [...prev];
-      while (next.length < mexicoGoals) next.push('');
-      return next.slice(0, mexicoGoals);
-    });
+    if (mexicoGoals === 0) setMexicoScorers([]);
+    else setMexicoScorers((prev) => trimScorers(prev).slice(0, mexicoGoals));
   }, [mexicoGoals]);
 
   useEffect(() => {
-    setCzechScorers((prev) => {
-      const next = [...prev];
-      while (next.length < czechGoals) next.push('');
-      return next.slice(0, czechGoals);
-    });
+    if (czechGoals === 0) setCzechScorers([]);
+    else setCzechScorers((prev) => trimScorers(prev).slice(0, czechGoals));
   }, [czechGoals]);
+
+  const filledMexicoScorers = useMemo(() => trimScorers(mexicoScorers), [mexicoScorers]);
+  const filledCzechScorers = useMemo(() => trimScorers(czechScorers), [czechScorers]);
 
   const filtered = predictions.filter((p) => {
     const q = search.trim().toLowerCase();
@@ -102,8 +94,8 @@ export default function PronosticosPage() {
 
   const handleSave = async () => {
     if (!editing) return;
-    if (mexicoScorers.some((s) => !s) || czechScorers.some((s) => !s)) {
-      toast.error('Selecciona todos los goleadores');
+    if (filledMexicoScorers.length > mexicoGoals || filledCzechScorers.length > czechGoals) {
+      toast.error('Demasiados goleadores para el marcador');
       return;
     }
 
@@ -112,8 +104,8 @@ export default function PronosticosPage() {
       await predictionsApi.update(editing.id, {
         mexicoScore: mexicoGoals,
         czechScore: czechGoals,
-        mexicoScorers,
-        czechScorers,
+        mexicoScorers: filledMexicoScorers,
+        czechScorers: filledCzechScorers,
       });
       toast.success('Pronóstico actualizado');
       setDialogOpen(false);
@@ -274,55 +266,24 @@ export default function PronosticosPage() {
           </div>
 
           {mexicoGoals > 0 && (
-            <div className="space-y-2">
-              <Label>Goleadores México ({mexicoGoals})</Label>
-              {mexicoScorers.map((scorer, i) => (
-                <Select
-                  key={`emx-${i}`}
-                  value={scorer || undefined}
-                  onValueChange={(v) =>
-                    setMexicoScorers((prev) => prev.map((s, idx) => (idx === i ? v : s)))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={`Gol ${i + 1}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mexicoPlayerList.map((player) => (
-                      <SelectItem key={`${i}-${player}`} value={player}>
-                        {player}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ))}
-            </div>
+            <OptionalScorersField
+              teamLabel="México"
+              maxGoals={mexicoGoals}
+              players={mexicoPlayerList}
+              scorers={mexicoScorers}
+              onChange={setMexicoScorers}
+              accentClass="text-leaf-darker"
+            />
           )}
 
           {czechGoals > 0 && (
-            <div className="space-y-2">
-              <Label>Goleadores Chequia ({czechGoals})</Label>
-              {czechScorers.map((scorer, i) => (
-                <Select
-                  key={`ecz-${i}`}
-                  value={scorer || undefined}
-                  onValueChange={(v) =>
-                    setCzechScorers((prev) => prev.map((s, idx) => (idx === i ? v : s)))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={`Gol ${i + 1}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {czechPlayerList.map((player) => (
-                      <SelectItem key={`${i}-${player}`} value={player}>
-                        {player}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ))}
-            </div>
+            <OptionalScorersField
+              teamLabel="Chequia"
+              maxGoals={czechGoals}
+              players={czechPlayerList}
+              scorers={czechScorers}
+              onChange={setCzechScorers}
+            />
           )}
 
           <div className="flex gap-2 pt-2">
