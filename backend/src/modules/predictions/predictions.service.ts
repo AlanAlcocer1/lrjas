@@ -90,7 +90,8 @@ export class PredictionsService {
       throw new NotFoundException('Usuario no encontrado o inactivo');
     }
 
-    this.validateScoresAndScorers(dto);
+    const scorers = this.normalizeScorers(dto);
+    this.validateScoresAndScorers({ ...dto, ...scorers });
 
     return this.withLock(async () => {
       const data = await this.readFile();
@@ -106,8 +107,8 @@ export class PredictionsService {
         participantName: formatFullName(participant),
         mexicoScore: dto.mexicoScore,
         czechScore: dto.czechScore,
-        mexicoScorers: dto.mexicoScorers,
-        czechScorers: dto.czechScorers,
+        mexicoScorers: scorers.mexicoScorers,
+        czechScorers: scorers.czechScorers,
         createdAt: now,
         updatedAt: now,
       };
@@ -119,7 +120,8 @@ export class PredictionsService {
   }
 
   async update(id: string, dto: UpdatePredictionDto) {
-    this.validateScoresAndScorers(dto);
+    const scorers = this.normalizeScorers(dto);
+    this.validateScoresAndScorers({ ...dto, ...scorers });
 
     return this.withLock(async () => {
       const data = await this.readFile();
@@ -131,8 +133,8 @@ export class PredictionsService {
         ...current,
         mexicoScore: dto.mexicoScore,
         czechScore: dto.czechScore,
-        mexicoScorers: dto.mexicoScorers,
-        czechScorers: dto.czechScorers,
+        mexicoScorers: scorers.mexicoScorers,
+        czechScorers: scorers.czechScorers,
         updatedAt: new Date().toISOString(),
       };
 
@@ -152,6 +154,16 @@ export class PredictionsService {
     });
   }
 
+  private normalizeScorers(dto: {
+    mexicoScorers: string[];
+    czechScorers: string[];
+  }) {
+    return {
+      mexicoScorers: dto.mexicoScorers.map((s) => s.trim()).filter(Boolean),
+      czechScorers: dto.czechScorers.map((s) => s.trim()).filter(Boolean),
+    };
+  }
+
   private validateScoresAndScorers(dto: {
     mexicoScore: number;
     czechScore: number;
@@ -161,16 +173,24 @@ export class PredictionsService {
     const mexicoPlayers = new Set(allMexicoPlayers());
     const czechPlayers = new Set(allCzechPlayers());
 
-    if (dto.mexicoScorers.length !== dto.mexicoScore) {
+    if (dto.mexicoScorers.length > dto.mexicoScore) {
       throw new BadRequestException(
-        `Debes elegir ${dto.mexicoScore} goleador(es) de México`,
+        `No puedes elegir más de ${dto.mexicoScore} goleador(es) de México`,
       );
     }
 
-    if (dto.czechScorers.length !== dto.czechScore) {
+    if (dto.czechScorers.length > dto.czechScore) {
       throw new BadRequestException(
-        `Debes elegir ${dto.czechScore} goleador(es) de República Checa`,
+        `No puedes elegir más de ${dto.czechScore} goleador(es) de República Checa`,
       );
+    }
+
+    if (dto.mexicoScore === 0 && dto.mexicoScorers.length > 0) {
+      throw new BadRequestException('No puedes elegir goleadores de México con marcador 0');
+    }
+
+    if (dto.czechScore === 0 && dto.czechScorers.length > 0) {
+      throw new BadRequestException('No puedes elegir goleadores de Chequia con marcador 0');
     }
 
     for (const scorer of dto.mexicoScorers) {

@@ -86,6 +86,20 @@ export class DashboardService {
     return mexicoDateKey(new Date(Date.UTC(y, m - 1, d - days, 12, 0, 0)));
   }
 
+  private mexicoYearMonthDaysAgo(monthsAgo: number): { year: number; month: number } {
+    const todayKey = mexicoDateKey();
+    const [ty, tm] = todayKey.split('-').map(Number);
+    const total = ty * 12 + (tm - 1) - monthsAgo;
+    return { year: Math.floor(total / 12), month: (total % 12) + 1 };
+  }
+
+  private mexicoMonthRange(year: number, month: number): { from: string; to: string } {
+    const from = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    return { from, to };
+  }
+
   private monthDateRange(ref: Date): { from: string; to: string } {
     const { start, end } = getMexicoMonthBounds(ref);
     const from = mexicoDateKey(start);
@@ -324,17 +338,15 @@ export class DashboardService {
 
   private async getMonthlyAttendances(hasDateMexico: boolean) {
     const months: { month: string; count: number }[] = [];
-    const todayKey = mexicoDateKey();
-    const [ty, tm] = todayKey.split('-').map(Number);
 
     for (let i = 5; i >= 0; i--) {
-      const ref = new Date(Date.UTC(ty, tm - 1 - i, 15, 12, 0, 0));
-      const { from, to } = this.monthDateRange(ref);
+      const { year, month } = this.mexicoYearMonthDaysAgo(i);
+      const { from, to } = this.mexicoMonthRange(year, month);
       const count = await this.prisma.attendance.count({
         where: this.attendanceCountWhere(from, to, hasDateMexico),
       });
       months.push({
-        month: parseMexicoDateKeyToMonth(from),
+        month: formatMexicoMonthLabel(year, month),
         count,
       });
     }
@@ -344,15 +356,13 @@ export class DashboardService {
 
   private async getMonthlyRegistrationsByMexicoDate() {
     const months: { month: string; count: number }[] = [];
-    const todayKey = mexicoDateKey();
-    const [ty, tm] = todayKey.split('-').map(Number);
 
     for (let i = 5; i >= 0; i--) {
-      const ref = new Date(Date.UTC(ty, tm - 1 - i, 15, 12, 0, 0));
-      const { from, to } = this.monthDateRange(ref);
+      const { year, month } = this.mexicoYearMonthDaysAgo(i);
+      const { from, to } = this.mexicoMonthRange(year, month);
       const count = await this.countRegistrationsByMexicoDateRange(from, to);
       months.push({
-        month: parseMexicoDateKeyToMonth(from),
+        month: formatMexicoMonthLabel(year, month),
         count,
       });
     }
@@ -442,8 +452,15 @@ export class DashboardService {
   }
 }
 
+function formatMexicoMonthLabel(year: number, month: number): string {
+  return new Date(Date.UTC(year, month - 1, 15, 12, 0, 0)).toLocaleDateString('es-MX', {
+    month: 'short',
+    year: '2-digit',
+    timeZone: 'UTC',
+  });
+}
+
 function parseMexicoDateKeyToMonth(key: string): string {
   const [y, m] = key.split('-').map(Number);
-  const date = new Date(Date.UTC(y, m - 1, 1, 12, 0, 0));
-  return date.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
+  return formatMexicoMonthLabel(y, m);
 }

@@ -13,18 +13,12 @@ import { toast } from 'sonner';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
 import { ParticipantLookupModal } from '@/components/pronostico/ParticipantLookupModal';
+import { OptionalScorersField, trimScorers } from '@/components/pronostico/OptionalScorersField';
 import { TeamRosterCard, teamFlagSrc } from '@/components/pronostico/TeamRosterCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { predictionsApi, getApiErrorMessage } from '@/services/api';
 import type { MatchInfo, Participant, Prediction } from '@/types';
 
@@ -148,20 +142,17 @@ export default function PronosticoPage() {
   const czechPlayerList = useMemo(() => (match ? flatPlayers(match.czech) : []), [match]);
 
   useEffect(() => {
-    setMexicoScorers((prev) => {
-      const next = [...prev];
-      while (next.length < mexicoGoals) next.push('');
-      return next.slice(0, mexicoGoals);
-    });
+    if (mexicoGoals === 0) setMexicoScorers([]);
+    else setMexicoScorers((prev) => trimScorers(prev).slice(0, mexicoGoals));
   }, [mexicoGoals]);
 
   useEffect(() => {
-    setCzechScorers((prev) => {
-      const next = [...prev];
-      while (next.length < czechGoals) next.push('');
-      return next.slice(0, czechGoals);
-    });
+    if (czechGoals === 0) setCzechScorers([]);
+    else setCzechScorers((prev) => trimScorers(prev).slice(0, czechGoals));
   }, [czechGoals]);
+
+  const filledMexicoScorers = useMemo(() => trimScorers(mexicoScorers), [mexicoScorers]);
+  const filledCzechScorers = useMemo(() => trimScorers(czechScorers), [czechScorers]);
 
   const checkParticipant = async (code: string) => {
     const trimmed = code.trim().toUpperCase();
@@ -200,8 +191,12 @@ export default function PronosticoPage() {
       toast.error('Marcador inválido');
       return false;
     }
-    if (mexicoScorers.some((s) => !s) || czechScorers.some((s) => !s)) {
-      toast.error('Selecciona todos los goleadores');
+    if (filledMexicoScorers.length > mexicoGoals) {
+      toast.error('Demasiados goleadores de México para el marcador');
+      return false;
+    }
+    if (filledCzechScorers.length > czechGoals) {
+      toast.error('Demasiados goleadores de Chequia para el marcador');
       return false;
     }
     return true;
@@ -220,8 +215,8 @@ export default function PronosticoPage() {
         participantCode: participantCode.trim().toUpperCase(),
         mexicoScore: mexicoGoals,
         czechScore: czechGoals,
-        mexicoScorers,
-        czechScorers,
+        mexicoScorers: filledMexicoScorers,
+        czechScorers: filledCzechScorers,
       });
       setExistingPrediction(result);
       setStep('success');
@@ -264,8 +259,8 @@ export default function PronosticoPage() {
                   </span>
                 </h1>
                 <p className="text-sm text-white/85 max-w-xl">
-                  Pon tu marcador y, si te animas, adivina quién mete los goles. Solo un pronóstico por
-                  persona — después ya no se puede cambiar.
+                  Pon tu marcador y, si te animas, adivina quién mete los goles (totalmente opcional).
+                  Solo un pronóstico por persona — después ya no se puede cambiar.
                 </p>
                 <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-black/20 px-3 py-1.5">
@@ -377,61 +372,24 @@ export default function PronosticoPage() {
                   </div>
 
                   {mexicoGoals > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-sm font-medium text-leaf-darker">
-                        Goleadores de México ({mexicoGoals})
-                      </p>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {mexicoScorers.map((scorer, i) => (
-                          <Select
-                            key={`mx-${i}`}
-                            value={scorer || undefined}
-                            onValueChange={(v) =>
-                              setMexicoScorers((prev) => prev.map((s, idx) => (idx === i ? v : s)))
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder={`Gol ${i + 1} de México`} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {mexicoPlayerList.map((p) => (
-                                <SelectItem key={`${i}-${p}`} value={p}>
-                                  {p}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ))}
-                      </div>
-                    </div>
+                    <OptionalScorersField
+                      teamLabel="México 🇲🇽"
+                      maxGoals={mexicoGoals}
+                      players={mexicoPlayerList}
+                      scorers={mexicoScorers}
+                      onChange={setMexicoScorers}
+                      accentClass="text-leaf-darker"
+                    />
                   )}
 
                   {czechGoals > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-sm font-medium">Goleadores de República Checa ({czechGoals})</p>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {czechScorers.map((scorer, i) => (
-                          <Select
-                            key={`cz-${i}`}
-                            value={scorer || undefined}
-                            onValueChange={(v) =>
-                              setCzechScorers((prev) => prev.map((s, idx) => (idx === i ? v : s)))
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder={`Gol ${i + 1} de Chequia`} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {czechPlayerList.map((p) => (
-                                <SelectItem key={`${i}-${p}`} value={p}>
-                                  {p}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ))}
-                      </div>
-                    </div>
+                    <OptionalScorersField
+                      teamLabel="República Checa 🇨🇿"
+                      maxGoals={czechGoals}
+                      players={czechPlayerList}
+                      scorers={czechScorers}
+                      onChange={setCzechScorers}
+                    />
                   )}
 
                   <Button
@@ -473,23 +431,23 @@ export default function PronosticoPage() {
                       mexicoFlag={mexicoFlag}
                       czechFlag={czechFlag}
                     />
-                    {(mexicoScorers.length > 0 || czechScorers.length > 0) && (
+                    {(filledMexicoScorers.length > 0 || filledCzechScorers.length > 0) && (
                       <div className="grid sm:grid-cols-2 gap-3 text-sm border-t pt-3">
-                        {mexicoScorers.length > 0 && (
+                        {filledMexicoScorers.length > 0 && (
                           <div>
                             <p className="font-medium text-leaf-darker mb-1">Goleadores 🇲🇽</p>
                             <ul className="text-muted-foreground">
-                              {mexicoScorers.map((s, i) => (
+                              {filledMexicoScorers.map((s, i) => (
                                 <li key={i}>· {s}</li>
                               ))}
                             </ul>
                           </div>
                         )}
-                        {czechScorers.length > 0 && (
+                        {filledCzechScorers.length > 0 && (
                           <div>
                             <p className="font-medium mb-1">Goleadores 🇨🇿</p>
                             <ul className="text-muted-foreground">
-                              {czechScorers.map((s, i) => (
+                              {filledCzechScorers.map((s, i) => (
                                 <li key={i}>· {s}</li>
                               ))}
                             </ul>
