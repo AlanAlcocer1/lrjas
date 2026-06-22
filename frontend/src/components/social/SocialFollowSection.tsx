@@ -27,7 +27,7 @@ export function SocialFollowSection() {
         </p>
 
         {loading ? (
-          <Skeleton className="h-36 w-full max-w-[260px] mx-auto rounded-lg" />
+          <Skeleton className="h-48 w-full max-w-[340px] mx-auto rounded-lg" />
         ) : post ? (
           <SocialPostPreview post={post} compact />
         ) : (
