@@ -11,5 +11,7 @@ export const BRAND = {
     imagotipoGreen: `${base}images/LRJAS%20Imagotipo%20verde.png`,
     imagotipoWhite: `${base}images/LRJAS%20Imagotipo%20blanco.png`,
     isotipoGreen: `${base}images/LRJAS%20Isotipo%20verde.png`,
+    mexicoFlag: `${base}images/mexico_bandera.png`,
+    czechFlag: `${base}images/bandera_chequia.png`,
   },
 } as const;

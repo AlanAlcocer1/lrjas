@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { isDevConsoleUser } from '../../common/dev-console-access';
+import { isPronosticoManager } from '../../common/pronostico-manager-access';
 
 @Injectable()
 export class AuthService {
@@ -29,6 +30,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         devConsole: isDevConsoleUser(user.username),
+        pronosticoManager: isPronosticoManager(user.username),
       },
     };
   }
@@ -39,6 +41,10 @@ export class AuthService {
       select: { id: true, username: true, name: true, role: true },
     });
     if (!user) return null;
-    return { ...user, devConsole: isDevConsoleUser(user.username) };
+    return {
+      ...user,
+      devConsole: isDevConsoleUser(user.username),
+      pronosticoManager: isPronosticoManager(user.username),
+    };
   }
 }
