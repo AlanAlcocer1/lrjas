@@ -15,9 +15,6 @@ import type {
   AdminUser,
   TodayAttendanceResponse,
   SocialPost,
-  MatchInfo,
-  Prediction,
-  PredictionStatus,
 } from '@/types';
 
 const api = axios.create({
@@ -125,31 +122,6 @@ export const socialApi = {
   remove: (id: string) => api.delete(`/social/posts/${id}`).then((r) => r.data),
 };
 
-export const predictionsApi = {
-  getMatch: () => api.get<MatchInfo>('/predictions/match').then((r) => r.data),
-  getStatus: (code?: string) =>
-    api
-      .get<PredictionStatus>('/predictions/status', { params: code ? { code } : undefined })
-      .then((r) => r.data),
-  create: (data: {
-    participantCode: string;
-    mexicoScore: number;
-    czechScore: number;
-    mexicoScorers: string[];
-    czechScorers: string[];
-  }) => api.post<Prediction>('/predictions', data).then((r) => r.data),
-  getAllAdmin: () => api.get<Prediction[]>('/predictions').then((r) => r.data),
-  update: (
-    id: string,
-    data: {
-      mexicoScore: number;
-      czechScore: number;
-      mexicoScorers: string[];
-      czechScorers: string[];
-    },
-  ) => api.put<Prediction>(`/predictions/${id}`, data).then((r) => r.data),
-  remove: (id: string) => api.delete(`/predictions/${id}`).then((r) => r.data),
-};
 
 export function getApiErrorMessage(error: unknown, fallback = 'Error inesperado'): string {
   if (!axios.isAxiosError(error)) return fallback;

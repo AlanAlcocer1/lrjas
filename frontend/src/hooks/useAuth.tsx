@@ -32,8 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     const res = await authApi.login(username, password);
     localStorage.setItem('lrjas_token', res.accessToken);
-    const me = await authApi.me();
-    setUser(me);
+    setUser(res.user);
   }, []);
 
   const logout = useCallback(() => {

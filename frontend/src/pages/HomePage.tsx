@@ -1,12 +1,11 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { UserPlus, QrCode, Shield, ArrowRight, Sparkles, Trophy } from 'lucide-react';
+import { UserPlus, QrCode, Shield, ArrowRight, Sparkles } from 'lucide-react';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
 import { Logo } from '@/components/brand/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { SocialFollowSection } from '@/components/social/SocialFollowSection';
 import { APP_DESCRIPTION } from '@/config/api';
 
 export default function HomePage() {
@@ -39,12 +38,8 @@ export default function HomePage() {
             </div>
           </FadeIn>
 
-          <FadeIn delay={0.12}>
-            <SocialFollowSection />
-          </FadeIn>
-
           <FadeIn delay={0.15}>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <Link to="/register" className="block group">
                 <Card className="h-full transition-all duration-300 hover:border-leaf/40 hover:shadow-md hover:shadow-leaf/10 group-hover:-translate-y-0.5">
                   <CardContent className="p-5 flex flex-col gap-3">
@@ -71,23 +66,6 @@ export default function HomePage() {
                       <p className="text-xs text-muted-foreground">Consulta tu código y descarga tu QR</p>
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-leaf-dark group-hover:translate-x-1 transition-all ml-auto" />
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Link to="/pronostico" className="block group sm:col-span-2 lg:col-span-1">
-                <Card className="h-full transition-all duration-300 hover:border-[#006837]/40 hover:shadow-md hover:shadow-[#006837]/10 group-hover:-translate-y-0.5 border-[#006837]/20 bg-gradient-to-br from-[#006837]/5 to-leaf/5">
-                  <CardContent className="p-5 flex flex-col gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#006837]/15 border border-[#006837]/25">
-                      <Trophy className="h-5 w-5 text-[#006837]" />
-                    </div>
-                    <div>
-                      <h2 className="font-semibold mb-1">Adivina el resultado</h2>
-                      <p className="text-xs text-muted-foreground">
-                        México vs Chequia — pon tu marcador antes del miércoles 24
-                      </p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-[#006837] group-hover:translate-x-1 transition-all ml-auto" />
                   </CardContent>
                 </Card>
               </Link>
