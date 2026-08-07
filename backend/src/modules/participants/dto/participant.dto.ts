@@ -10,24 +10,28 @@ import {
   IsBoolean,
   IsDateString,
   Matches,
+  ValidateIf,
 } from 'class-validator';
-import { Sex } from '@prisma/client';
+import { ParticipantType, Sex } from '@prisma/client';
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
 export class CreateParticipantDto {
+  @IsEnum(ParticipantType)
+  type!: ParticipantType;
+
   @IsString()
-  firstName: string;
+  firstName!: string;
 
   @IsOptional()
   @IsString()
   middleName?: string;
 
   @IsString()
-  lastName: string;
+  lastName!: string;
 
   @IsString()
-  motherLastName: string;
+  motherLastName!: string;
 
   @IsOptional()
   @IsInt()
@@ -37,16 +41,34 @@ export class CreateParticipantDto {
 
   @IsDateString()
   @Matches(DATE_KEY, { message: 'birthDate debe ser YYYY-MM-DD' })
-  birthDate: string;
+  birthDate!: string;
 
   @IsEnum(Sex)
-  sex: Sex;
+  sex!: Sex;
 
+  @ValidateIf((o: CreateParticipantDto) => o.type === ParticipantType.MEMBER)
   @IsUUID()
-  stakeId: string;
+  stakeId?: string;
 
+  @ValidateIf((o: CreateParticipantDto) => o.type === ParticipantType.MEMBER)
   @IsUUID()
-  wardId: string;
+  wardId?: string;
+
+  @IsOptional()
+  @IsString()
+  visitorStake?: string;
+
+  @IsOptional()
+  @IsString()
+  visitorWard?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  state?: string;
 
   @IsOptional()
   @IsObject()
@@ -54,6 +76,10 @@ export class CreateParticipantDto {
 }
 
 export class UpdateParticipantDto {
+  @IsOptional()
+  @IsEnum(ParticipantType)
+  type?: ParticipantType;
+
   @IsOptional()
   @IsString()
   firstName?: string;
@@ -94,6 +120,22 @@ export class UpdateParticipantDto {
   wardId?: string;
 
   @IsOptional()
+  @IsString()
+  visitorStake?: string | null;
+
+  @IsOptional()
+  @IsString()
+  visitorWard?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string | null;
+
+  @IsOptional()
+  @IsString()
+  state?: string | null;
+
+  @IsOptional()
   @IsBoolean()
   active?: boolean;
 
@@ -119,6 +161,10 @@ export class ParticipantQueryDto {
   @IsOptional()
   @IsEnum(Sex)
   sex?: Sex;
+
+  @IsOptional()
+  @IsEnum(ParticipantType)
+  type?: ParticipantType;
 
   @IsOptional()
   @IsString()

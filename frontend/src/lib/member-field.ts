@@ -1,7 +1,13 @@
-import type { FieldDefinition } from '@/types';
-import { findNingunoStake, getNingunoWardId, isNingunoStake } from '@/lib/catalog';
+import type { FieldDefinition, ParticipantType } from '@/types';
+import { findNingunoStake, getNingunoWardId, isSpecialStake } from '@/lib/catalog';
 
 export const MEMBER_FIELD_NAME = 'miembro';
+
+export const PARTICIPANT_TYPE_LABELS: Record<ParticipantType, string> = {
+  MEMBER: 'Miembro',
+  NON_MEMBER: 'No miembro',
+  VISITOR: 'Visitante',
+};
 
 export function splitMemberField(fields: FieldDefinition[]) {
   const miembroField = fields.find((f) => f.name === MEMBER_FIELD_NAME);
@@ -30,18 +36,28 @@ export function applyNingunoStake(
 }
 
 export function memberStakes<T extends { id: string; name: string }>(stakes: T[]): T[] {
-  return stakes.filter((s) => !isNingunoStake(s));
+  return stakes.filter((s) => !isSpecialStake(s));
 }
 
 export function validateMemberStake(
   stakes: { id: string; name: string }[],
   stakeId: string,
   wardId: string,
-  isMember: boolean,
 ): string | null {
-  if (!isMember) return null;
   const stake = stakes.find((s) => s.id === stakeId);
-  if (!stake || isNingunoStake(stake)) return 'Selecciona una estaca';
+  if (!stake || isSpecialStake(stake)) return 'Selecciona una estaca';
   if (!wardId) return 'Selecciona un barrio';
   return null;
+}
+
+export function credentialAffiliationLabel(participant: {
+  type?: ParticipantType | null;
+  stake: { name: string };
+  ward: { name: string };
+}): string {
+  const type = participant.type ?? 'MEMBER';
+  if (type === 'NON_MEMBER' || type === 'VISITOR') {
+    return PARTICIPANT_TYPE_LABELS[type];
+  }
+  return `${participant.stake.name} · ${participant.ward.name}`;
 }

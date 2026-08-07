@@ -1,5 +1,7 @@
 export type Sex = 'MALE' | 'FEMALE';
 
+export type ParticipantType = 'MEMBER' | 'NON_MEMBER' | 'VISITOR';
+
 export type SocialPlatform = 'INSTAGRAM' | 'FACEBOOK';
 
 export interface SocialPost {
@@ -49,6 +51,10 @@ export interface Participant {
   age: number;
   birthDate: string;
   sex: Sex;
+  type: ParticipantType;
+  visitorStake?: string | null;
+  city?: string | null;
+  state?: string | null;
   active: boolean;
   stake: { id: string; name: string };
   ward: { id: string; name: string };
@@ -116,6 +122,7 @@ export interface DashboardStats {
     totalAttendances: number;
     newThisMonth: number;
     activeParticipants: number;
+    totalVisitors: number;
   };
   charts: {
     monthlyAttendances: { month: string; count: number }[];
@@ -141,14 +148,19 @@ export interface AuthResponse {
 }
 
 export interface RegisterFormData {
+  type: ParticipantType;
   firstName: string;
   middleName?: string;
   lastName: string;
   motherLastName: string;
   birthDate: string;
   sex: Sex;
-  stakeId: string;
-  wardId: string;
+  stakeId?: string;
+  wardId?: string;
+  visitorStake?: string;
+  visitorWard?: string;
+  city?: string;
+  state?: string;
   dynamicFields?: Record<string, boolean>;
 }
 

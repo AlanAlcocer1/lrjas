@@ -86,6 +86,7 @@ export const attendanceApi = {
     api.get<TodayAttendanceResponse>('/attendance/today').then((r) => r.data),
   getRange: (period: 'day' | 'week' | 'month', date?: string) =>
     api.get<TodayAttendanceResponse>('/attendance/range', { params: { period, date } }).then((r) => r.data),
+  remove: (id: string) => api.delete(`/attendance/${id}`).then((r) => r.data),
 };
 
 export const usersApi = {

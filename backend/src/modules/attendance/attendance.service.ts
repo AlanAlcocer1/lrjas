@@ -111,6 +111,13 @@ export class AttendanceService {
     });
   }
 
+  async remove(id: string) {
+    const attendance = await this.prisma.attendance.findUnique({ where: { id } });
+    if (!attendance) throw new NotFoundException('Asistencia no encontrada');
+    await this.prisma.attendance.delete({ where: { id } });
+    return { ok: true };
+  }
+
   async getTodayList() {
     return this.getRangeList('day', mexicoDateKey());
   }

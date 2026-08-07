@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { ParticipantType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   eachMexicoDateKey,
@@ -146,6 +146,7 @@ export class DashboardService {
       totalAttendances,
       newThisMonth,
       activeParticipants,
+      totalVisitors,
       sexDistribution,
       stakeDistribution,
       monthlyAttendances,
@@ -157,6 +158,7 @@ export class DashboardService {
       this.prisma.attendance.count(),
       this.countRegistrationsByMexicoDateRange(monthFromKey, today),
       this.prisma.participant.count({ where: attendedWhere }),
+      this.prisma.participant.count({ where: { active: true, type: ParticipantType.VISITOR } }),
       this.prisma.participant.groupBy({
         by: ['sex'],
         _count: { id: true },
@@ -183,6 +185,7 @@ export class DashboardService {
         totalAttendances,
         newThisMonth,
         activeParticipants,
+        totalVisitors,
       },
       charts: {
         monthlyAttendances,
@@ -213,6 +216,7 @@ export class DashboardService {
       totalAttendances,
       newInPeriod,
       attendedInPeriod,
+      totalVisitors,
       sexDistribution,
       stakeDistribution,
       periodAttendances,
@@ -224,6 +228,9 @@ export class DashboardService {
       this.prisma.attendance.count({ where: attendanceWhere }),
       this.countRegistrationsByMexicoDateRange(range.from, range.to),
       this.prisma.participant.count({ where: attendedWhere }),
+      this.prisma.participant.count({
+        where: { active: true, type: ParticipantType.VISITOR, ...attendedWhere },
+      }),
       this.prisma.participant.groupBy({
         by: ['sex'],
         _count: { id: true },
@@ -250,6 +257,7 @@ export class DashboardService {
         totalAttendances,
         newThisMonth: newInPeriod,
         activeParticipants: attendedInPeriod,
+        totalVisitors,
       },
       charts: {
         monthlyAttendances: periodAttendances,

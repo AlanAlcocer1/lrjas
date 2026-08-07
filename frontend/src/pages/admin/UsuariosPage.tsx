@@ -34,11 +34,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MemberStakeSection } from '@/components/forms/MemberStakeSection';
 import { FieldSwitchRow } from '@/components/forms/FieldSwitchRow';
 import { participantsApi, catalogApi, attendanceApi, fieldsApi, getDuplicateRegistrationError } from '@/services/api';
-import { isNingunoStake } from '@/lib/catalog';
 import {
-  applyNingunoStake,
-  inferMemberFromStake,
-  isMemberSelected,
+  PARTICIPANT_TYPE_LABELS,
   splitMemberField,
   validateMemberStake,
 } from '@/lib/member-field';
@@ -46,7 +43,7 @@ import { exportToExcel, buildDynamicFieldColumns } from '@/lib/export';
 import { downloadParticipantsQrZip } from '@/lib/qr-export';
 import { formatDate, formatTime, cn } from '@/lib/utils';
 import { ageFromBirthDateKey, maxBirthDateForAge, minBirthDateForAge } from '@/lib/mexico-time';
-import type { FieldDefinition, Participant, Stake } from '@/types';
+import type { FieldDefinition, Participant, ParticipantType, Stake } from '@/types';
 
 export default function UsuariosPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -73,8 +70,13 @@ export default function UsuariosPage() {
     motherLastName: '',
     birthDate: '',
     sex: 'MALE' as 'MALE' | 'FEMALE',
+    type: 'MEMBER' as ParticipantType,
     stakeId: '',
     wardId: '',
+    visitorStake: '',
+    visitorWard: '',
+    city: '',
+    state: '',
     active: true,
   });
   const [editDynamicFields, setEditDynamicFields] = useState<Record<string, boolean>>({});
@@ -123,17 +125,19 @@ export default function UsuariosPage() {
       motherLastName: p.motherLastName,
       birthDate: p.birthDate,
       sex: p.sex,
+      type: p.type ?? 'MEMBER',
       stakeId: p.stake.id,
       wardId: p.ward.id,
+      visitorStake: p.visitorStake ?? '',
+      visitorWard: p.type === 'VISITOR' ? p.ward.name : '',
+      city: p.city ?? '',
+      state: p.state ?? '',
       active: p.active,
     });
     const dynamicDefaults: Record<string, boolean> = { ...(p.dynamicFields ?? {}) };
     fields.forEach((field) => {
       dynamicDefaults[field.name] = p.dynamicFields?.[field.name] ?? false;
     });
-    if (inferMemberFromStake(dynamicDefaults, p.stake.name)) {
-      dynamicDefaults.miembro = true;
-    }
     setEditDynamicFields(dynamicDefaults);
     setDialogMode('edit');
   };
@@ -163,17 +167,8 @@ export default function UsuariosPage() {
   const saveEdit = async () => {
     if (!selected) return;
 
-    let submitStakeId = editForm.stakeId;
-    let submitWardId = editForm.wardId;
-
-    if (!isEditMember) {
-      const ninguno = applyNingunoStake(stakes);
-      if (ninguno) {
-        submitStakeId = ninguno.stakeId;
-        submitWardId = ninguno.wardId;
-      }
-    } else {
-      const stakeError = validateMemberStake(stakes, submitStakeId, submitWardId, true);
+    if (editForm.type === 'MEMBER') {
+      const stakeError = validateMemberStake(stakes, editForm.stakeId, editForm.wardId);
       if (stakeError) {
         toast.error(stakeError);
         return;
@@ -183,16 +178,17 @@ export default function UsuariosPage() {
     setSaving(true);
     try {
       await participantsApi.update(selected.id, {
+        type: editForm.type,
         firstName: editForm.firstName.toUpperCase(),
         middleName: editForm.middleName.toUpperCase() || undefined,
         lastName: editForm.lastName.toUpperCase(),
         motherLastName: editForm.motherLastName.toUpperCase(),
         birthDate: editForm.birthDate,
         sex: editForm.sex,
-        stakeId: submitStakeId,
-        wardId: submitWardId,
+        stakeId: editForm.type === 'MEMBER' ? editForm.stakeId : undefined,
+        wardId: editForm.type === 'MEMBER' ? editForm.wardId : undefined,
         active: editForm.active,
-        dynamicFields: editDynamicFields,
+        dynamicFields: editForm.type === 'MEMBER' ? editDynamicFields : {},
       });
       toast.success('Usuario actualizado');
       setDialogMode(null);
@@ -226,14 +222,15 @@ export default function UsuariosPage() {
         res.items.map((p) => ({
           Código: p.code,
           Nombre: p.fullName,
+          Tipo: PARTICIPANT_TYPE_LABELS[p.type ?? 'MEMBER'],
           Edad: p.age,
           'Fecha de nacimiento': p.birthDate,
           Sexo: p.sex === 'MALE' ? 'Masculino' : 'Femenino',
-          Estaca: p.stake.name,
-          Barrio: p.ward.name,
+          Estaca: p.type === 'MEMBER' || !p.type ? p.stake.name : PARTICIPANT_TYPE_LABELS[p.type],
+          Barrio: p.type === 'MEMBER' || !p.type ? p.ward.name : '',
           Activo: p.active ? 'Sí' : 'No',
           Registro: formatDate(p.createdAt),
-          ...buildDynamicFieldColumns(fields, p.dynamicFields),
+          ...(p.type === 'MEMBER' || !p.type ? buildDynamicFieldColumns(fields, p.dynamicFields) : {}),
         })),
         `usuarios-lrjas-${new Date().toISOString().slice(0, 10)}`,
       );
@@ -271,22 +268,8 @@ export default function UsuariosPage() {
     }
   };
 
-  const editStake = stakes.find((s) => s.id === editForm.stakeId);
   const editAge = editForm.birthDate ? ageFromBirthDateKey(editForm.birthDate) : null;
   const { otherFields } = splitMemberField(fields);
-  const isEditMember = inferMemberFromStake(editDynamicFields, editStake?.name ?? '');
-
-  const handleEditMemberChange = (checked: boolean) => {
-    setEditDynamicFields((prev) => ({ ...prev, miembro: checked }));
-    if (!checked) {
-      const ninguno = applyNingunoStake(stakes);
-      if (ninguno) {
-        setEditForm((prev) => ({ ...prev, stakeId: ninguno.stakeId, wardId: ninguno.wardId }));
-      }
-    } else if (isNingunoStake(editStake)) {
-      setEditForm((prev) => ({ ...prev, stakeId: '', wardId: '' }));
-    }
-  };
 
   return (
     <AdminLayout>
@@ -345,6 +328,7 @@ export default function UsuariosPage() {
                           <tr className="border-b border-border text-muted-foreground">
                             <th className="text-left p-4 font-medium">Código</th>
                             <th className="text-left p-4 font-medium hidden sm:table-cell">Nombre</th>
+                            <th className="text-left p-4 font-medium hidden md:table-cell">Tipo</th>
                             <th className="text-left p-4 font-medium hidden md:table-cell">Edad</th>
                             <th className="text-left p-4 font-medium hidden lg:table-cell">Estaca</th>
                             <th className="text-left p-4 font-medium hidden xl:table-cell">Registro</th>
@@ -365,8 +349,15 @@ export default function UsuariosPage() {
                                 {!p.active && <Badge variant="destructive" className="ml-2">Inactivo</Badge>}
                               </td>
                               <td className="p-4 hidden sm:table-cell">{p.fullName}</td>
+                              <td className="p-4 hidden md:table-cell">
+                                <Badge variant="outline">{PARTICIPANT_TYPE_LABELS[p.type ?? 'MEMBER']}</Badge>
+                              </td>
                               <td className="p-4 hidden md:table-cell">{p.age}</td>
-                              <td className="p-4 hidden lg:table-cell text-muted-foreground">{p.stake.name}</td>
+                              <td className="p-4 hidden lg:table-cell text-muted-foreground">
+                                {p.type === 'MEMBER' || !p.type
+                                  ? p.stake.name
+                                  : PARTICIPANT_TYPE_LABELS[p.type]}
+                              </td>
                               <td className="p-4 hidden xl:table-cell text-muted-foreground">{formatDate(p.createdAt)}</td>
                               <td className="p-4">
                                 <div className="flex justify-end gap-1">
@@ -441,10 +432,15 @@ export default function UsuariosPage() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Edad</span><span>{selected.age}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Fecha de nacimiento</span><span>{selected.birthDate}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Sexo</span><span>{selected.sex === 'MALE' ? 'Masculino' : 'Femenino'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Estaca</span><span>{selected.stake.name}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Barrio</span><span>{selected.ward.name}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Estado</span><span>{selected.active ? 'Activo' : 'Inactivo'}</span></div>
-                {fields.length > 0 && (
+                <div className="flex justify-between"><span className="text-muted-foreground">Tipo</span><span>{PARTICIPANT_TYPE_LABELS[selected.type ?? 'MEMBER']}</span></div>
+                {(selected.type === 'MEMBER' || !selected.type) && (
+                  <>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Estaca</span><span>{selected.stake.name}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Barrio</span><span>{selected.ward.name}</span></div>
+                  </>
+                )}
+                <div className="flex justify-between"><span className="text-muted-foreground">Activo</span><span>{selected.active ? 'Activo' : 'Inactivo'}</span></div>
+                {(selected.type === 'MEMBER' || !selected.type) && fields.length > 0 && (
                   <div className="pt-2 border-t border-border space-y-2">
                     <p className="text-muted-foreground font-medium">Información adicional</p>
                     {fields.map((field) => (
@@ -512,21 +508,35 @@ export default function UsuariosPage() {
                   </Select>
                 </div>
               </div>
-              <MemberStakeSection
-                stakes={stakes}
-                isMember={isEditMember}
-                onMemberChange={handleEditMemberChange}
-                stakeId={editForm.stakeId}
-                wardId={editForm.wardId}
-                onStakeChange={(nextStakeId, nextWardId) =>
-                  setEditForm({ ...editForm, stakeId: nextStakeId, wardId: nextWardId })
-                }
-              />
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select
+                  value={editForm.type}
+                  onValueChange={(v) => setEditForm({ ...editForm, type: v as ParticipantType, stakeId: '', wardId: '' })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MEMBER">Miembro</SelectItem>
+                    <SelectItem value="NON_MEMBER">No miembro</SelectItem>
+                    <SelectItem value="VISITOR">Visitante</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {editForm.type === 'MEMBER' && (
+                <MemberStakeSection
+                  stakes={stakes}
+                  stakeId={editForm.stakeId}
+                  wardId={editForm.wardId}
+                  onStakeChange={(nextStakeId, nextWardId) =>
+                    setEditForm({ ...editForm, stakeId: nextStakeId, wardId: nextWardId })
+                  }
+                />
+              )}
               <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
                 <Label>Activo</Label>
                 <Switch checked={editForm.active} onCheckedChange={(v) => setEditForm({ ...editForm, active: v })} />
               </div>
-              {otherFields.length > 0 && (
+              {editForm.type === 'MEMBER' && otherFields.length > 0 && (
                 <div className="space-y-3 pt-2 border-t border-border">
                   <p className="text-sm font-medium">Información adicional</p>
                   {otherFields.map((field) => (

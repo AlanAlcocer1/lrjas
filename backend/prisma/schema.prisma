@@ -32,6 +32,12 @@ enum SocialPlatform {
   FACEBOOK
 }
 
+enum ParticipantType {
+  MEMBER
+  NON_MEMBER
+  VISITOR
+}
+
 model User {
   id        String   @id @default(uuid())
   username  String   @unique
@@ -89,8 +95,12 @@ model Participant {
   lastName       String                  @map("last_name")
   motherLastName String                  @map("mother_last_name")
   age            Int
-  birthDate      DateTime @map("birth_date") @db.Date
+  birthDate      DateTime                @map("birth_date") @db.Date
   sex            Sex
+  type           ParticipantType         @default(MEMBER)
+  visitorStake   String?                 @map("visitor_stake")
+  city           String?
+  state          String?
   stakeId        String                  @map("stake_id")
   stake          Stake                   @relation(fields: [stakeId], references: [id])
   wardId         String                  @map("ward_id")

@@ -191,7 +191,7 @@ export default function CheckInPage() {
     const isMember = isMemberSelected(fillDynamicFields);
 
     if (isMember) {
-      const stakeError = validateMemberStake(stakes, fillStakeId, fillWardId, true);
+      const stakeError = validateMemberStake(stakes, fillStakeId, fillWardId);
       if (stakeError) {
         toast.error(stakeError);
         return;
@@ -527,6 +527,7 @@ export default function CheckInPage() {
               {needsMemberSection && (
                 <MemberStakeSection
                   stakes={stakes}
+                  showMemberToggle
                   isMember={fillIsMember}
                   onMemberChange={handleFillMemberChange}
                   stakeId={fillStakeId}

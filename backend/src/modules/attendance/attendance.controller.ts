@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { CreateAttendanceDto, AttendanceRangeQueryDto } from './dto/attendance.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -24,8 +24,15 @@ export class AttendanceController {
     return this.attendanceService.getRangeList(query.period, query.date);
   }
 
-  @Get('history/:participantId')  @UseGuards(JwtAuthGuard)
+  @Get('history/:participantId')
+  @UseGuards(JwtAuthGuard)
   getHistory(@Param('participantId') participantId: string) {
     return this.attendanceService.getHistory(participantId);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  remove(@Param('id') id: string) {
+    return this.attendanceService.remove(id);
   }
 }
