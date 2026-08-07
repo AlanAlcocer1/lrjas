@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Logo } from '@/components/brand/Logo';
 import { downloadCredentialPng, generateQrDataUrl } from '@/lib/credential';
+import { credentialAffiliationLabel } from '@/lib/member-field';
 import type { Participant } from '@/types';
 
 interface CredentialCardProps {
@@ -49,7 +50,7 @@ export function CredentialCard({ participant, animated = true }: CredentialCardP
         <div className="text-center mb-6">
           <h2 className="text-xl font-semibold">{participant.fullName}</h2>
           <p className="text-xs text-muted-foreground mt-1">
-            {participant.stake.name} · {participant.ward.name}
+            {credentialAffiliationLabel(participant)}
           </p>
         </div>
 

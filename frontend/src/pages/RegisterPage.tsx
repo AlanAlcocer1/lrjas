@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Loader2, ChevronRight, AlertCircle } from 'lucide-react';
+import { Loader2, ChevronRight, AlertCircle, ArrowLeft, Users, UserX, MapPinned } from 'lucide-react';
 import { toast } from 'sonner';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
@@ -16,15 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MemberStakeSection } from '@/components/forms/MemberStakeSection';
 import { FieldSwitchRow } from '@/components/forms/FieldSwitchRow';
 import { catalogApi, fieldsApi, getDuplicateRegistrationError, participantsApi } from '@/services/api';
-import { findNingunoStake, getNingunoWardId } from '@/lib/catalog';
-import {
-  applyNingunoStake,
-  inferMemberFromStake,
-  isMemberSelected,
-  splitMemberField,
-  validateMemberStake,
-} from '@/lib/member-field';
-import type { FieldDefinition, Stake } from '@/types';
+import { splitMemberField, validateMemberStake, PARTICIPANT_TYPE_LABELS } from '@/lib/member-field';
+import type { FieldDefinition, ParticipantType, Stake } from '@/types';
 import { ageFromBirthDateKey, maxBirthDateForAge, minBirthDateForAge } from '@/lib/mexico-time';
 
 const baseSchema = z.object({
@@ -34,8 +27,8 @@ const baseSchema = z.object({
   motherLastName: z.string().min(2, 'Mínimo 2 caracteres'),
   birthDate: z.string().min(1, 'Selecciona tu fecha de nacimiento'),
   sex: z.enum(['MALE', 'FEMALE']),
-  stakeId: z.string(),
-  wardId: z.string(),
+  stakeId: z.string().optional(),
+  wardId: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (!data.birthDate) return;
   const age = ageFromBirthDateKey(data.birthDate);
@@ -56,8 +49,19 @@ const nameFieldProps = {
   },
 } as const;
 
+const typeOptions: {
+  type: ParticipantType;
+  title: string;
+  icon: typeof Users;
+}[] = [
+  { type: 'MEMBER', title: 'Miembro', icon: Users },
+  { type: 'NON_MEMBER', title: 'No miembro', icon: UserX },
+  { type: 'VISITOR', title: 'Visitante', icon: MapPinned },
+];
+
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const [participantType, setParticipantType] = useState<ParticipantType | null>(null);
   const [stakes, setStakes] = useState<Stake[]>([]);
   const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,25 +83,10 @@ export default function RegisterPage() {
     },
   });
 
-  const stakeId = form.watch('stakeId');
+  const stakeId = form.watch('stakeId') ?? '';
   const birthDate = form.watch('birthDate');
   const computedAge = birthDate ? ageFromBirthDateKey(birthDate) : null;
   const { otherFields } = splitMemberField(fields);
-  const isMember = isMemberSelected(dynamicValues);
-
-  const handleMemberChange = (checked: boolean) => {
-    setDynamicValues((prev) => ({ ...prev, miembro: checked }));
-    if (!checked) {
-      const ninguno = applyNingunoStake(stakes);
-      if (ninguno) {
-        form.setValue('stakeId', ninguno.stakeId);
-        form.setValue('wardId', ninguno.wardId);
-      }
-    } else {
-      form.setValue('stakeId', '');
-      form.setValue('wardId', '');
-    }
-  };
 
   const handleStakeChange = (nextStakeId: string, nextWardId: string) => {
     form.setValue('stakeId', nextStakeId);
@@ -110,34 +99,22 @@ export default function RegisterPage() {
         setStakes(s);
         setFields(f);
         const defaults: Record<string, boolean> = {};
-        f.forEach((field) => { defaults[field.name] = false; });
+        f.forEach((field) => {
+          defaults[field.name] = false;
+        });
         setDynamicValues(defaults);
-
-        const ninguno = findNingunoStake(s);
-        if (ninguno) {
-          form.setValue('stakeId', ninguno.id);
-          form.setValue('wardId', getNingunoWardId(ninguno));
-        }
       })
       .catch(() => toast.error('Error al cargar datos'))
       .finally(() => setLoading(false));
   }, []);
 
   const onSubmit = async (data: RegisterFormValues) => {
+    if (!participantType) return;
     setSubmitting(true);
     setDuplicate(null);
 
-    let submitStakeId = data.stakeId;
-    let submitWardId = data.wardId;
-
-    if (!isMember) {
-      const ninguno = applyNingunoStake(stakes);
-      if (ninguno) {
-        submitStakeId = ninguno.stakeId;
-        submitWardId = ninguno.wardId;
-      }
-    } else {
-      const stakeError = validateMemberStake(stakes, submitStakeId, submitWardId, true);
+    if (participantType === 'MEMBER') {
+      const stakeError = validateMemberStake(stakes, data.stakeId ?? '', data.wardId ?? '');
       if (stakeError) {
         toast.error(stakeError);
         setSubmitting(false);
@@ -147,14 +124,16 @@ export default function RegisterPage() {
 
     try {
       const participant = await participantsApi.register({
-        ...data,
-        stakeId: submitStakeId,
-        wardId: submitWardId,
+        type: participantType,
         firstName: data.firstName.toUpperCase(),
         middleName: data.middleName?.toUpperCase(),
         lastName: data.lastName.toUpperCase(),
         motherLastName: data.motherLastName.toUpperCase(),
-        dynamicFields: dynamicValues,
+        birthDate: data.birthDate,
+        sex: data.sex,
+        stakeId: participantType === 'MEMBER' ? data.stakeId : undefined,
+        wardId: participantType === 'MEMBER' ? data.wardId : undefined,
+        dynamicFields: participantType === 'MEMBER' ? dynamicValues : undefined,
       });
       navigate('/register/success', { state: { participant } });
     } catch (err) {
@@ -176,15 +155,49 @@ export default function RegisterPage() {
           <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-xl">Registro de usuario</CardTitle>
-              <CardDescription>Completa tus datos para obtener tu código personal</CardDescription>
+              <CardDescription>
+                {!participantType
+                  ? 'Elige cómo te registras'
+                  : `Registro: ${PARTICIPANT_TYPE_LABELS[participantType]}`}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="flex justify-center py-12">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
+              ) : !participantType ? (
+                <div className="grid gap-3">
+                  {typeOptions.map(({ type, title, icon: Icon }) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setParticipantType(type)}
+                      className="flex items-center gap-4 rounded-xl border border-border p-4 text-left transition-all hover:border-leaf/40 hover:bg-leaf/5"
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-leaf/10 border border-leaf/25">
+                        <Icon className="h-5 w-5 text-leaf-dark" />
+                      </div>
+                      <p className="font-semibold">{title}</p>
+                    </button>
+                  ))}
+                </div>
               ) : (
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 -ml-2 text-muted-foreground"
+                    onClick={() => {
+                      setParticipantType(null);
+                      setDuplicate(null);
+                    }}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Cambiar tipo
+                  </Button>
+
                   {duplicate && (
                     <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 space-y-3">
                       <div className="flex gap-3">
@@ -261,8 +274,13 @@ export default function RegisterPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Sexo *</Label>
-                      <Select value={form.watch('sex')} onValueChange={(v) => form.setValue('sex', v as 'MALE' | 'FEMALE')}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      <Select
+                        value={form.watch('sex')}
+                        onValueChange={(v) => form.setValue('sex', v as 'MALE' | 'FEMALE')}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="MALE">Masculino</SelectItem>
                           <SelectItem value="FEMALE">Femenino</SelectItem>
@@ -271,16 +289,16 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  <MemberStakeSection
-                    stakes={stakes}
-                    isMember={isMember}
-                    onMemberChange={handleMemberChange}
-                    stakeId={stakeId}
-                    wardId={form.watch('wardId')}
-                    onStakeChange={handleStakeChange}
-                  />
+                  {participantType === 'MEMBER' && (
+                    <MemberStakeSection
+                      stakes={stakes}
+                      stakeId={stakeId}
+                      wardId={form.watch('wardId') ?? ''}
+                      onStakeChange={handleStakeChange}
+                    />
+                  )}
 
-                  {otherFields.length > 0 && (
+                  {participantType === 'MEMBER' && otherFields.length > 0 && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}

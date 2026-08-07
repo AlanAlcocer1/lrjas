@@ -11,8 +11,10 @@ import {
   ParticipantQueryDto,
 } from './dto/participant.dto';
 import { Prisma } from '@prisma/client';
+import { ParticipantType } from '@prisma/client';
 import { ageFromBirthDateKey, parseMexicoDate } from '../../common/mexico-time';
-import { NONE_STAKE_NAME } from '../../bootstrap/ensure-ninguno-stake';
+import { NONE_STAKE_NAME, NONE_WARD_NAME } from '../../bootstrap/ensure-ninguno-stake';
+import { OTRO_STAKE_NAME, OTRO_WARD_NAME } from '../../bootstrap/ensure-otro-stake';
 import { MEMBER_FIELD_NAME, inferIsMember } from '../../bootstrap/ensure-miembro-field';
 
 function upper(value: string): string {
@@ -38,6 +40,10 @@ export class ParticipantsService {
     age: number;
     birthDate: Date;
     sex: string;
+    type: ParticipantType;
+    visitorStake: string | null;
+    city: string | null;
+    state: string | null;
     active: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -61,6 +67,10 @@ export class ParticipantsService {
       age: participant.age,
       birthDate: participant.birthDate.toISOString().slice(0, 10),
       sex: participant.sex,
+      type: participant.type,
+      visitorStake: participant.visitorStake,
+      city: participant.city,
+      state: participant.state,
       active: participant.active,
       stake: participant.stake,
       ward: participant.ward,
@@ -187,6 +197,92 @@ export class ParticipantsService {
     });
   }
 
+  private miembroValueForType(type: ParticipantType): boolean {
+    return type === ParticipantType.MEMBER || type === ParticipantType.VISITOR;
+  }
+
+  private async resolveNingunoIds() {
+    const stake = await this.prisma.stake.findUnique({
+      where: { name: NONE_STAKE_NAME },
+      include: { wards: true },
+    });
+    if (!stake) throw new BadRequestException('Estaca Ninguno no configurada');
+    const ward = stake.wards.find((w) => w.name === NONE_WARD_NAME) ?? stake.wards[0];
+    if (!ward) throw new BadRequestException('Barrio Ninguno no configurado');
+    return { stakeId: stake.id, wardId: ward.id };
+  }
+
+  private async resolveMemberStakeWard(stakeId?: string, wardId?: string) {
+    if (!stakeId || !wardId) {
+      throw new BadRequestException('Selecciona estaca y barrio');
+    }
+    const stake = await this.prisma.stake.findUnique({
+      where: { id: stakeId },
+      include: { wards: { where: { id: wardId } } },
+    });
+    if (!stake || !stake.active) throw new BadRequestException('Estaca inválida');
+    if (stake.name === NONE_STAKE_NAME || stake.name === OTRO_STAKE_NAME) {
+      throw new BadRequestException('Selecciona una estaca válida');
+    }
+    if (stake.wards.length === 0) throw new BadRequestException('Barrio inválido');
+    return { stakeId: stake.id, wardId };
+  }
+
+  private async resolveVisitorPlacement(dto: {
+    visitorStake?: string;
+    visitorWard?: string;
+    city?: string;
+    state?: string;
+  }) {
+    const stake = await this.prisma.stake.upsert({
+      where: { name: OTRO_STAKE_NAME },
+      update: { active: true },
+      create: { name: OTRO_STAKE_NAME },
+    });
+
+    const visitorWard = upperOptional(dto.visitorWard) || OTRO_WARD_NAME;
+    const ward = await this.prisma.ward.upsert({
+      where: { name_stakeId: { name: visitorWard, stakeId: stake.id } },
+      update: { active: true },
+      create: { name: visitorWard, stakeId: stake.id },
+    });
+
+    return {
+      stakeId: stake.id,
+      wardId: ward.id,
+      visitorStake: upperOptional(dto.visitorStake) ?? null,
+      city: upperOptional(dto.city) ?? null,
+      state: upperOptional(dto.state) ?? null,
+    };
+  }
+
+  private async resolvePlacementByType(
+    type: ParticipantType,
+    dto: {
+      stakeId?: string;
+      wardId?: string;
+      visitorStake?: string;
+      visitorWard?: string;
+      city?: string | null;
+      state?: string | null;
+    },
+  ) {
+    if (type === ParticipantType.NON_MEMBER) {
+      const ids = await this.resolveNingunoIds();
+      return { ...ids, visitorStake: null as string | null, city: null as string | null, state: null as string | null };
+    }
+    if (type === ParticipantType.VISITOR) {
+      return this.resolveVisitorPlacement({
+        visitorStake: dto.visitorStake ?? undefined,
+        visitorWard: dto.visitorWard ?? undefined,
+        city: dto.city ?? undefined,
+        state: dto.state ?? undefined,
+      });
+    }
+    const ids = await this.resolveMemberStakeWard(dto.stakeId, dto.wardId);
+    return { ...ids, visitorStake: null as string | null, city: null as string | null, state: null as string | null };
+  }
+
   async create(dto: CreateParticipantDto) {
     const names = this.normalizeNameFields(dto);
     const existing = await this.findExistingByName(names);
@@ -194,9 +290,14 @@ export class ParticipantsService {
 
     const code = await this.generateUniqueCode();
     const age = this.resolveAge(dto);
+    const placement = await this.resolvePlacementByType(dto.type, dto);
     const activeFields = await this.prisma.fieldDefinition.findMany({
       where: { active: true },
     });
+
+    const dynamicFields =
+      dto.type === ParticipantType.MEMBER ? { ...(dto.dynamicFields ?? {}) } : {};
+    dynamicFields[MEMBER_FIELD_NAME] = this.miembroValueForType(dto.type);
 
     const participant = await this.prisma.participant.create({
       data: {
@@ -208,12 +309,16 @@ export class ParticipantsService {
         age,
         birthDate: parseMexicoDate(dto.birthDate),
         sex: dto.sex,
-        stakeId: dto.stakeId,
-        wardId: dto.wardId,
+        type: dto.type,
+        visitorStake: placement.visitorStake,
+        city: placement.city,
+        state: placement.state,
+        stakeId: placement.stakeId,
+        wardId: placement.wardId,
         fieldValues: {
           create: activeFields.map((field) => ({
             fieldId: field.id,
-            value: dto.dynamicFields?.[field.name] ?? false,
+            value: dynamicFields[field.name] ?? false,
           })),
         },
       },
@@ -242,6 +347,7 @@ export class ParticipantsService {
 
     if (query.stakeId) where.stakeId = query.stakeId;
     if (query.sex) where.sex = query.sex;
+    if (query.type) where.type = query.type;
     if (query.active !== undefined) where.active = query.active === 'true';
 
     const orderBy: Prisma.ParticipantOrderByWithRelationInput = {
@@ -318,8 +424,14 @@ export class ParticipantsService {
       options: matches.map((p) => ({
         code: p.code,
         fullName: [p.firstName, p.middleName, p.lastName, p.motherLastName].filter(Boolean).join(' '),
-        stake: p.stake.name,
-        ward: p.ward.name,
+        stake:
+          p.type === ParticipantType.NON_MEMBER
+            ? 'No miembro'
+            : p.type === ParticipantType.VISITOR
+              ? 'Visitante'
+              : p.stake.name,
+        ward:
+          p.type === ParticipantType.MEMBER ? p.ward.name : '',
       })),
     };
   }
@@ -426,7 +538,8 @@ export class ParticipantsService {
   async update(id: string, dto: UpdateParticipantDto) {
     const current = await this.findOne(id);
 
-    const { dynamicFields, birthDate, age: dtoAge, ...rawData } = dto;
+    const { dynamicFields, birthDate, age: dtoAge, type, visitorWard, visitorStake, city, state, stakeId, wardId, ...rawData } =
+      dto;
 
     const mergedNames = this.normalizeNameFields({
       firstName: rawData.firstName ?? current.firstName,
@@ -445,11 +558,15 @@ export class ParticipantsService {
       this.assertNotDuplicate(existing);
     }
 
-    const data: Prisma.ParticipantUpdateInput = { ...rawData };
+    const nextType = type ?? current.type;
+    const data: Prisma.ParticipantUpdateInput = {};
+
     if (rawData.firstName !== undefined) data.firstName = upper(rawData.firstName);
     if (rawData.middleName !== undefined) data.middleName = upperOptional(rawData.middleName) ?? null;
     if (rawData.lastName !== undefined) data.lastName = upper(rawData.lastName);
     if (rawData.motherLastName !== undefined) data.motherLastName = upper(rawData.motherLastName);
+    if (rawData.sex !== undefined) data.sex = rawData.sex;
+    if (rawData.active !== undefined) data.active = rawData.active;
 
     if (birthDate !== undefined) {
       const age = this.resolveAge({ birthDate, age: dtoAge });
@@ -459,39 +576,84 @@ export class ParticipantsService {
       data.age = dtoAge;
     }
 
-    const participant = await this.prisma.participant.update({
+    const typeChanged = type !== undefined && type !== current.type;
+    const visitorFieldsTouched =
+      visitorStake !== undefined || visitorWard !== undefined || city !== undefined || state !== undefined;
+    const stakeTouched = stakeId !== undefined || wardId !== undefined;
+
+    if (typeChanged || visitorFieldsTouched || stakeTouched || type !== undefined) {
+      const placement = await this.resolvePlacementByType(nextType, {
+        stakeId: stakeId ?? current.stake.id,
+        wardId: wardId ?? current.ward.id,
+        visitorStake:
+          visitorStake !== undefined
+            ? visitorStake ?? undefined
+            : nextType === ParticipantType.VISITOR
+              ? current.visitorStake ?? undefined
+              : undefined,
+        visitorWard: visitorWard ?? undefined,
+        city:
+          city !== undefined
+            ? city
+            : nextType === ParticipantType.VISITOR
+              ? current.city
+              : null,
+        state:
+          state !== undefined
+            ? state
+            : nextType === ParticipantType.VISITOR
+              ? current.state
+              : null,
+      });
+      data.type = nextType;
+      data.visitorStake = placement.visitorStake;
+      data.city = placement.city;
+      data.state = placement.state;
+      data.stake = { connect: { id: placement.stakeId } };
+      data.ward = { connect: { id: placement.wardId } };
+    }
+
+    await this.prisma.participant.update({
       where: { id },
       data,
-      include: {
-        stake: true,
-        ward: true,
-        fieldValues: { include: { field: true } },
-      },
     });
 
-    if (dynamicFields) {
-      const names = Object.keys(dynamicFields);
-      if (names.length > 0) {
-        const fieldRows = await this.prisma.fieldDefinition.findMany({
-          where: { name: { in: names } },
-          select: { id: true, name: true },
-        });
-        const fieldByName = new Map(fieldRows.map((f) => [f.name, f.id]));
-
-        await Promise.all(
-          Object.entries(dynamicFields).map(([name, value]) => {
-            const fieldId = fieldByName.get(name);
-            if (!fieldId) return Promise.resolve();
-            return this.prisma.participantFieldValue.upsert({
-              where: {
-                participantId_fieldId: { participantId: id, fieldId },
-              },
-              update: { value },
-              create: { participantId: id, fieldId, value },
-            });
-          }),
-        );
+    const fieldsToSync = { ...(dynamicFields ?? {}) };
+    if (typeChanged || type !== undefined) {
+      fieldsToSync[MEMBER_FIELD_NAME] = this.miembroValueForType(nextType);
+    }
+    if (nextType !== ParticipantType.MEMBER && (typeChanged || dynamicFields !== undefined)) {
+      const activeFields = await this.prisma.fieldDefinition.findMany({
+        where: { active: true },
+        select: { name: true },
+      });
+      for (const field of activeFields) {
+        if (field.name === MEMBER_FIELD_NAME) continue;
+        fieldsToSync[field.name] = false;
       }
+    }
+
+    const names = Object.keys(fieldsToSync);
+    if (names.length > 0) {
+      const fieldRows = await this.prisma.fieldDefinition.findMany({
+        where: { name: { in: names } },
+        select: { id: true, name: true },
+      });
+      const fieldByName = new Map(fieldRows.map((f) => [f.name, f.id]));
+
+      await Promise.all(
+        Object.entries(fieldsToSync).map(([name, value]) => {
+          const fieldId = fieldByName.get(name);
+          if (!fieldId) return Promise.resolve();
+          return this.prisma.participantFieldValue.upsert({
+            where: {
+              participantId_fieldId: { participantId: id, fieldId },
+            },
+            update: { value },
+            create: { participantId: id, fieldId, value },
+          });
+        }),
+      );
     }
 
     return this.findOne(id);

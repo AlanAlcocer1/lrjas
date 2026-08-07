@@ -119,7 +119,7 @@ export default function CredentialPage() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{option.fullName}</p>
                         <p className="text-xs text-muted-foreground truncate">
-                          Código {option.code} · {option.stake} · {option.ward}
+                          Código {option.code} · {[option.stake, option.ward].filter(Boolean).join(' · ')}
                         </p>
                       </div>
                     </button>

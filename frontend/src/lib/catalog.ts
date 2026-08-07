@@ -1,9 +1,16 @@
 export const NONE_OPTION_NAME = 'Ninguno';
+export const OTRO_OPTION_NAME = 'Otro';
 
 export function findNingunoStake<T extends { name: string; id: string; wards: { id: string; name: string }[] }>(
   stakes: T[],
 ) {
   return stakes.find((s) => s.name === NONE_OPTION_NAME);
+}
+
+export function findOtroStake<T extends { name: string; id: string; wards: { id: string; name: string }[] }>(
+  stakes: T[],
+) {
+  return stakes.find((s) => s.name === OTRO_OPTION_NAME);
 }
 
 export function getNingunoWardId(stake: { wards: { id: string; name: string }[] } | undefined) {
@@ -23,8 +30,14 @@ export function resolveStakeSelection(
   return { stakeId, wardId: '' };
 }
 
-export function isNingunoStake(
-  stake: { name: string } | undefined,
-) {
+export function isNingunoStake(stake: { name: string } | undefined) {
   return stake?.name === NONE_OPTION_NAME;
+}
+
+export function isOtroStake(stake: { name: string } | undefined) {
+  return stake?.name === OTRO_OPTION_NAME;
+}
+
+export function isSpecialStake(stake: { name: string } | undefined) {
+  return isNingunoStake(stake) || isOtroStake(stake);
 }

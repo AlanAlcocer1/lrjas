@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CalendarCheck, RefreshCw, ScanLine, Hash, FileSpreadsheet } from 'lucide-react';
+import { CalendarCheck, RefreshCw, ScanLine, Hash, FileSpreadsheet, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
@@ -8,11 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge, EmptyState, Skeleton } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { attendanceApi, fieldsApi } from '@/services/api';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { attendanceApi, fieldsApi, getApiErrorMessage } from '@/services/api';
 import { exportToExcel, buildDynamicFieldColumns } from '@/lib/export';
 import { mexicoDateKey } from '@/lib/mexico-time';
 import { cn } from '@/lib/utils';
-import type { FieldDefinition, TodayAttendanceResponse } from '@/types';
+import type { FieldDefinition, TodayAttendanceItem, TodayAttendanceResponse } from '@/types';
 
 type Period = 'day' | 'week' | 'month';
 
@@ -28,6 +35,8 @@ export default function AttendanceTodayPage() {
   const [data, setData] = useState<TodayAttendanceResponse | null>(null);
   const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pendingDelete, setPendingDelete] = useState<TodayAttendanceItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const isToday = dateKey === mexicoDateKey();
 
@@ -61,6 +70,22 @@ export default function AttendanceTodayPage() {
 
   const refresh = () => {
     void load();
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+
+    setDeleting(true);
+    try {
+      await attendanceApi.remove(pendingDelete.id);
+      toast.success('Asistencia eliminada');
+      setPendingDelete(null);
+      await load();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'No se pudo eliminar la asistencia'));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const exportExcel = () => {
@@ -168,6 +193,7 @@ export default function AttendanceTodayPage() {
                           <th className="text-left p-4 font-medium hidden lg:table-cell">Barrio</th>
                           <th className="text-left p-4 font-medium">Hora</th>
                           <th className="text-left p-4 font-medium hidden sm:table-cell">Método</th>
+                          <th className="text-right p-4 font-medium">Acciones</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -196,6 +222,17 @@ export default function AttendanceTodayPage() {
                                 {item.method === 'QR' ? 'QR' : 'Manual'}
                               </Badge>
                             </td>
+                            <td className="p-4 text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={() => setPendingDelete(item)}
+                                title="Eliminar asistencia"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </td>
                           </motion.tr>
                         ))}
                       </tbody>
@@ -207,6 +244,57 @@ export default function AttendanceTodayPage() {
           </FadeIn>
         </div>
       </PageTransition>
+
+      <Dialog
+        open={!!pendingDelete}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setPendingDelete(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Eliminar asistencia</DialogTitle>
+            <DialogDescription>
+              ¿Seguro que quieres quitar este registro? Después podrás marcar la asistencia correcta.
+            </DialogDescription>
+          </DialogHeader>
+
+          {pendingDelete && (
+            <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-1">
+              <p className="font-medium">{pendingDelete.participant.fullName}</p>
+              <p className="text-sm text-muted-foreground">
+                Código{' '}
+                <span className="font-mono font-semibold text-leaf-dark">
+                  {pendingDelete.participant.code}
+                </span>
+                {' · '}
+                {pendingDelete.timeMexico}
+                {pendingDelete.dateMexico ? ` · ${pendingDelete.dateMexico}` : ''}
+              </p>
+            </div>
+          )}
+
+          <div className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
+            <Button
+              variant="outline"
+              className="flex-1"
+              disabled={deleting}
+              onClick={() => setPendingDelete(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1 gap-2"
+              disabled={deleting}
+              onClick={confirmDelete}
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Sí, eliminar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

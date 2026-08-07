@@ -1,5 +1,6 @@
 import QRCode from 'qrcode';
 import { BRAND } from '@/config/brand';
+import { credentialAffiliationLabel } from '@/lib/member-field';
 import type { Participant } from '@/types';
 
 const CANVAS = { width: 400, height: 560 };
@@ -80,7 +81,7 @@ function drawCredentialCanvas(
   ctx.fillStyle = '#5b7235';
   ctx.font = '11px Arial, Helvetica, sans-serif';
   ctx.fillText(
-    `${participant.stake.name} · ${participant.ward.name}`,
+    credentialAffiliationLabel(participant),
     CANVAS.width / 2,
     nameY + 20,
   );

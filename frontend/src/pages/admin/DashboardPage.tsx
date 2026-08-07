@@ -10,6 +10,7 @@ import {
   Loader2,
   CalendarRange,
   RotateCcw,
+  MapPinned,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -39,7 +40,7 @@ import { dashboardApi } from '@/services/api';
 import { exportDashboardPdf } from '@/lib/dashboard-pdf';
 import { mexicoDateKey } from '@/lib/mexico-time';
 import type { DashboardStats } from '@/types';
-import { cn, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 
 const COLORS = ['#84BD31', '#4B7914', '#006837', '#A2C95D', '#5B7235', '#538D4E'];
 
@@ -48,12 +49,14 @@ const defaultKpis = [
   { key: 'totalAttendances' as const, label: 'Asistencias totales', icon: UserCheck, color: 'text-leaf', hint: 'Check-ins acumulados' },
   { key: 'newThisMonth' as const, label: 'Nuevos usuarios (mes)', icon: UserPlus, color: 'text-leaf-darker', hint: 'Registros de cuenta este mes' },
   { key: 'activeParticipants' as const, label: 'Asistieron (30 días)', icon: Activity, color: 'text-amber-600', hint: 'Personas distintas con al menos 1 check-in' },
+  { key: 'totalVisitors' as const, label: 'Visitantes', icon: MapPinned, color: 'text-sky-700', hint: 'Miembros de otra estaca / ciudad' },
 ];
 
 const filteredKpis = [
   { key: 'totalAttendances' as const, label: 'Check-ins en periodo', icon: UserCheck, color: 'text-leaf', hint: 'Total de asistencias registradas' },
   { key: 'activeParticipants' as const, label: 'Personas que asistieron', icon: Activity, color: 'text-amber-600', hint: 'Usuarios distintos con check-in' },
   { key: 'newThisMonth' as const, label: 'Nuevos usuarios', icon: UserPlus, color: 'text-leaf-darker', hint: 'Cuentas creadas en el periodo (no check-ins)' },
+  { key: 'totalVisitors' as const, label: 'Visitantes', icon: MapPinned, color: 'text-sky-700', hint: 'Visitantes entre quienes asistieron' },
   { key: 'totalParticipants' as const, label: 'Usuarios en el sistema', icon: Users, color: 'text-leaf-dark', hint: 'Total de cuentas activas (referencia)' },
 ];
 
@@ -64,7 +67,55 @@ const tooltipStyle = {
   color: '#1a3320',
 };
 
-const legendStyle = { fontSize: 12, color: '#5b7235' };
+const legendStyle = { fontSize: 13, color: '#1a3320', paddingTop: 4 };
+
+function withPiePercents<T extends { count: number }>(items: T[] | undefined) {
+  const list = items ?? [];
+  const total = list.reduce((sum, item) => sum + item.count, 0) || 1;
+  return list.map((item) => ({ ...item, percent: item.count / total }));
+}
+
+function pieLabelContent(props: {
+  cx?: number;
+  cy?: number;
+  midAngle?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+  percent?: number;
+  value?: number;
+}) {
+  const { cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, percent = 0, value = 0 } = props;
+  if (percent < 0.04 || value <= 0) return null;
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.55;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#ffffff"
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={13}
+      fontWeight={700}
+      style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.25)', strokeWidth: 2 }}
+    >
+      {value}
+    </text>
+  );
+}
+
+function pieLegendFormatter(
+  value: string,
+  entry: { payload?: { count?: number; percent?: number } },
+) {
+  const count = entry.payload?.count ?? 0;
+  const pct = typeof entry.payload?.percent === 'number'
+    ? Math.round(entry.payload.percent * 100)
+    : null;
+  return pct !== null ? `${value}: ${count} (${pct}%)` : `${value}: ${count}`;
+}
 
 function ChartContainer({
   loading,
@@ -100,8 +151,10 @@ export default function DashboardPage() {
   const dashboardRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
-  const chartHeight = isMobile ? 220 : 200;
-  const pieOuterRadius = isMobile ? 58 : 70;
+  const chartHeight = isMobile ? 240 : 230;
+  const pieChartHeight = isMobile ? 260 : 250;
+  const pieOuterRadius = isMobile ? 68 : 78;
+  const axisFontSize = isMobile ? 11 : 13;
   const hasFilter = Boolean(appliedFrom && appliedTo);
   const kpis = hasFilter ? filteredKpis : defaultKpis;
 
@@ -157,9 +210,6 @@ export default function DashboardPage() {
     if (!dashboardRef.current || !stats) return;
     setExporting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      window.dispatchEvent(new Event('resize'));
-      await new Promise((resolve) => setTimeout(resolve, 500));
       await exportDashboardPdf(dashboardRef.current);
       toast.success('PDF descargado');
     } catch (error) {
@@ -170,7 +220,6 @@ export default function DashboardPage() {
     }
   };
 
-  const animateCharts = !exporting;
   const attendanceTitle = hasFilter ? 'Check-ins en el periodo' : 'Asistencias por mes';
   const registrationTitle = hasFilter ? 'Nuevos usuarios en el periodo' : 'Nuevos usuarios por mes';
   const distributionSuffix = hasFilter ? ' (quienes asistieron)' : '';
@@ -236,18 +285,15 @@ export default function DashboardPage() {
           <div
             ref={dashboardRef}
             data-dashboard-export
-            className={cn(
-              'space-y-4 sm:space-y-6 bg-white p-3 sm:p-4 rounded-xl w-full min-w-0',
-              exporting && 'min-w-[720px]',
-            )}
+            className="space-y-4 sm:space-y-6 bg-white p-3 sm:p-4 rounded-xl w-full min-w-0"
           >
             {hasFilter && stats?.period && (
-              <p className="text-sm text-muted-foreground" data-pdf-section>
+              <p className="text-sm text-muted-foreground" data-pdf-section data-pdf-kind="meta">
                 Periodo: {stats.period.from} — {stats.period.to}
               </p>
             )}
 
-            <div data-pdf-section className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+            <div data-pdf-section data-pdf-kind="kpis" className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-5">
               {kpis.map((kpi) => (
                 <div key={kpi.key} className="min-w-0">
                   <Card>
@@ -277,8 +323,8 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            <div className={cn('grid gap-3 sm:gap-4 grid-cols-1', !exporting && 'lg:grid-cols-2')}>
-              <Card data-pdf-section className="min-w-0 overflow-hidden">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-2">
+              <Card data-pdf-section data-pdf-kind="chart" className="min-w-0 overflow-hidden">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm sm:text-base">{attendanceTitle}</CardTitle>
                 </CardHeader>
@@ -290,22 +336,22 @@ export default function DashboardPage() {
                         <XAxis
                           dataKey="month"
                           stroke="#5b7235"
-                          fontSize={isMobile ? 10 : 12}
+                          fontSize={axisFontSize}
                           interval={0}
                           angle={isMobile ? -35 : 0}
                           textAnchor={isMobile ? 'end' : 'middle'}
                           height={isMobile ? 50 : 30}
                         />
-                        <YAxis stroke="#5b7235" fontSize={isMobile ? 10 : 12} width={isMobile ? 28 : 36} />
+                        <YAxis stroke="#5b7235" fontSize={axisFontSize} width={isMobile ? 28 : 40} />
                         <Tooltip contentStyle={tooltipStyle} />
-                        <Bar dataKey="count" fill="#84BD31" radius={[4, 4, 0, 0]} isAnimationActive={animateCharts} />
+                        <Bar dataKey="count" fill="#84BD31" radius={[4, 4, 0, 0]} isAnimationActive={false} />
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
                 </CardContent>
               </Card>
 
-              <Card data-pdf-section className="min-w-0 overflow-hidden">
+              <Card data-pdf-section data-pdf-kind="chart" className="min-w-0 overflow-hidden">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm sm:text-base">{registrationTitle}</CardTitle>
                 </CardHeader>
@@ -317,13 +363,13 @@ export default function DashboardPage() {
                         <XAxis
                           dataKey="month"
                           stroke="#5b7235"
-                          fontSize={isMobile ? 10 : 12}
+                          fontSize={axisFontSize}
                           interval={0}
                           angle={isMobile ? -35 : 0}
                           textAnchor={isMobile ? 'end' : 'middle'}
                           height={isMobile ? 50 : 30}
                         />
-                        <YAxis stroke="#5b7235" fontSize={isMobile ? 10 : 12} width={isMobile ? 28 : 36} />
+                        <YAxis stroke="#5b7235" fontSize={axisFontSize} width={isMobile ? 28 : 40} />
                         <Tooltip contentStyle={tooltipStyle} />
                         <Line
                           type="monotone"
@@ -331,7 +377,7 @@ export default function DashboardPage() {
                           stroke="#4B7914"
                           strokeWidth={2}
                           dot={{ fill: '#4B7914', r: isMobile ? 3 : 4 }}
-                          isAnimationActive={animateCharts}
+                          isAnimationActive={false}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -339,36 +385,42 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              <Card data-pdf-section className="min-w-0 overflow-hidden">
+              <Card data-pdf-section data-pdf-kind="chart" className="min-w-0 overflow-hidden">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm sm:text-base">Distribución por sexo{distributionSuffix}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6">
-                  <ChartContainer loading={loading} height={chartHeight}>
+                  <ChartContainer loading={loading} height={pieChartHeight}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={stats?.charts.sexDistribution}
+                          data={withPiePercents(stats?.charts.sexDistribution)}
                           dataKey="count"
                           nameKey="sex"
                           cx="50%"
-                          cy="45%"
+                          cy="42%"
                           outerRadius={pieOuterRadius}
-                          isAnimationActive={animateCharts}
+                          label={pieLabelContent}
+                          labelLine={false}
+                          isAnimationActive={false}
                         >
-                          {stats?.charts.sexDistribution.map((_, i) => (
+                          {withPiePercents(stats?.charts.sexDistribution).map((_, i) => (
                             <Cell key={i} fill={COLORS[i % COLORS.length]} />
                           ))}
                         </Pie>
                         <Tooltip contentStyle={tooltipStyle} />
-                        <Legend verticalAlign="bottom" wrapperStyle={legendStyle} />
+                        <Legend
+                          verticalAlign="bottom"
+                          wrapperStyle={legendStyle}
+                          formatter={pieLegendFormatter}
+                        />
                       </PieChart>
                     </ResponsiveContainer>
                   </ChartContainer>
                 </CardContent>
               </Card>
 
-              <Card data-pdf-section className="min-w-0 overflow-hidden">
+              <Card data-pdf-section data-pdf-kind="chart" className="min-w-0 overflow-hidden">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm sm:text-base">Distribución por edad{distributionSuffix}</CardTitle>
                 </CardHeader>
@@ -380,24 +432,24 @@ export default function DashboardPage() {
                         <XAxis
                           dataKey="range"
                           stroke="#5b7235"
-                          fontSize={isMobile ? 10 : 12}
+                          fontSize={axisFontSize}
                           interval={0}
                         />
-                        <YAxis stroke="#5b7235" fontSize={isMobile ? 10 : 12} width={isMobile ? 28 : 36} allowDecimals={false} />
+                        <YAxis stroke="#5b7235" fontSize={axisFontSize} width={isMobile ? 28 : 40} allowDecimals={false} />
                         <Tooltip contentStyle={tooltipStyle} />
-                        <Bar dataKey="count" fill="#006837" radius={[4, 4, 0, 0]} isAnimationActive={animateCharts} />
+                        <Bar dataKey="count" fill="#006837" radius={[4, 4, 0, 0]} isAnimationActive={false} />
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
                 </CardContent>
               </Card>
 
-              <Card data-pdf-section className="min-w-0 overflow-hidden">
+              <Card data-pdf-section data-pdf-kind="chart" className="min-w-0 overflow-hidden">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm sm:text-base">Distribución por estaca{distributionSuffix}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6">
-                  <ChartContainer loading={loading} height={Math.max(chartHeight, (stats?.charts.stakeDistribution.length ?? 0) * (isMobile ? 28 : 24) + 40)}>
+                  <ChartContainer loading={loading} height={Math.max(chartHeight, (stats?.charts.stakeDistribution.length ?? 0) * (isMobile ? 30 : 26) + 40)}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={stats?.charts.stakeDistribution}
@@ -405,55 +457,64 @@ export default function DashboardPage() {
                         margin={{ left: isMobile ? 4 : 8, right: 8 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#dce8cc" />
-                        <XAxis type="number" stroke="#5b7235" fontSize={isMobile ? 10 : 12} />
+                        <XAxis type="number" stroke="#5b7235" fontSize={axisFontSize} />
                         <YAxis
                           dataKey="stake"
                           type="category"
                           stroke="#5b7235"
-                          fontSize={isMobile ? 9 : 10}
-                          width={isMobile ? 72 : 88}
+                          fontSize={isMobile ? 11 : 12}
+                          width={isMobile ? 80 : 100}
                           tickFormatter={(value: string) =>
-                            value.length > 14 ? `${value.slice(0, 14)}…` : value
+                            value.length > 16 ? `${value.slice(0, 16)}…` : value
                           }
                         />
                         <Tooltip contentStyle={tooltipStyle} />
-                        <Bar dataKey="count" fill="#4B7914" radius={[0, 4, 4, 0]} isAnimationActive={animateCharts} />
+                        <Bar dataKey="count" fill="#4B7914" radius={[0, 4, 4, 0]} isAnimationActive={false} />
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
                 </CardContent>
               </Card>
 
-              {!loading && (stats?.charts.fieldDistributions ?? []).map((field) => (
-                <Card key={field.fieldName} data-pdf-section className="min-w-0 overflow-hidden">
+              {!loading && (stats?.charts.fieldDistributions ?? []).map((field) => {
+                const pieData = withPiePercents(field.data);
+                return (
+                <Card key={field.fieldName} data-pdf-section data-pdf-kind="chart" className="min-w-0 overflow-hidden">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm sm:text-base leading-snug">{field.label}</CardTitle>
                   </CardHeader>
                   <CardContent className="px-2 sm:px-6">
-                    <ChartContainer loading={false} height={chartHeight}>
+                    <ChartContainer loading={false} height={pieChartHeight}>
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
-                            data={field.data}
+                            data={pieData}
                             dataKey="count"
                             nameKey="label"
                             cx="50%"
-                            cy="45%"
+                            cy="42%"
                             outerRadius={pieOuterRadius}
-                            isAnimationActive={animateCharts}
+                            label={pieLabelContent}
+                            labelLine={false}
+                            isAnimationActive={false}
                           >
-                            {field.data.map((_, idx) => (
+                            {pieData.map((_, idx) => (
                               <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
                             ))}
                           </Pie>
                           <Tooltip contentStyle={tooltipStyle} />
-                          <Legend verticalAlign="bottom" wrapperStyle={legendStyle} />
+                          <Legend
+                            verticalAlign="bottom"
+                            wrapperStyle={legendStyle}
+                            formatter={pieLegendFormatter}
+                          />
                         </PieChart>
                       </ResponsiveContainer>
                     </ChartContainer>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
