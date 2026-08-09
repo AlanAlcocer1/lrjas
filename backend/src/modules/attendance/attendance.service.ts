@@ -211,12 +211,12 @@ export class AttendanceService {
     const uniqueKeys = new Set(filtered.map((a) => `${a.participantId}|${a.dateMexico}`));
     const uniqueTotal = uniqueKeys.size;
 
-    // Vista general (sin evento): una fila por persona/día; evento = lista o General
+    // Vista general (sin evento): una fila por persona/día; varios eventos en lista
     const showUnique = !eventId;
-    const itemsSource = showUnique
+    const itemsSource: { row: (typeof filtered)[number]; eventNames: string[] }[] = showUnique
       ? (() => {
           const seen = new Set<string>();
-          const rows: typeof filtered = [];
+          const rows: { row: (typeof filtered)[number]; eventNames: string[] }[] = [];
           for (const a of filtered) {
             const key = `${a.participantId}|${a.dateMexico}`;
             if (seen.has(key)) continue;
@@ -225,17 +225,14 @@ export class AttendanceService {
               (x) => x.participantId === a.participantId && x.dateMexico === a.dateMexico,
             );
             const eventNames = [...new Set(sameDay.map((x) => x.event?.name || GENERAL_EVENT_NAME))];
-            rows.push({
-              ...a,
-              event: {
-                ...a.event,
-                name: eventNames.length > 1 ? eventNames.join(', ') : eventNames[0] || GENERAL_EVENT_NAME,
-              },
-            } as (typeof filtered)[number]);
+            rows.push({ row: a, eventNames });
           }
           return rows;
         })()
-      : filtered;
+      : filtered.map((a) => ({
+          row: a,
+          eventNames: [a.event?.name || GENERAL_EVENT_NAME],
+        }));
 
     return {
       period,
@@ -249,7 +246,7 @@ export class AttendanceService {
       total: showUnique ? uniqueTotal : filtered.length,
       uniqueTotal,
       recordsTotal: filtered.length,
-      items: itemsSource.map((a) => ({
+      items: itemsSource.map(({ row: a, eventNames }) => ({
         id: a.id,
         method: a.method,
         createdAt: a.createdAt,
@@ -257,8 +254,9 @@ export class AttendanceService {
         timeMexico: hora_mexico(a.createdAt),
         event: {
           id: a.event?.id ?? '',
-          name: a.event?.name || GENERAL_EVENT_NAME,
+          name: eventNames.join(', ') || GENERAL_EVENT_NAME,
         },
+        eventNames,
         participant: {
           code: a.participant.code,
           fullName: this.formatFullName(a.participant),

@@ -59,7 +59,9 @@ export default function UsuariosPage() {
   const [stakes, setStakes] = useState<Stake[]>([]);
   const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [selected, setSelected] = useState<Participant | null>(null);
-  const [history, setHistory] = useState<{ id: string; method: string; createdAt: string }[]>([]);
+  const [history, setHistory] = useState<
+    { id: string; method: string; createdAt: string; event?: { id: string; name: string } }[]
+  >([]);
   const [dialogMode, setDialogMode] = useState<'view' | 'edit' | 'history' | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Participant | null>(null);
   const [deleting, setDeleting] = useState(false);
