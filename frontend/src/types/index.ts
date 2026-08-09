@@ -77,6 +77,7 @@ export interface TodayAttendanceItem {
   dateMexico?: string;
   timeMexico: string;
   event?: { id: string; name: string };
+  eventNames?: string[];
   participant: {
     code: string;
     fullName: string;

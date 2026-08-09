@@ -162,7 +162,7 @@ export default function AttendanceTodayPage() {
       data.items.map((item, i) => ({
         '#': i + 1,
         ...(period !== 'day' ? { Fecha: item.dateMexico ?? '' } : {}),
-        Evento: item.event?.name || 'General',
+        Evento: (item.eventNames?.length ? item.eventNames : [item.event?.name || 'General']).join('\n'),
         Código: item.participant.code,
         Nombre: item.participant.fullName,
         Estaca: item.participant.stake,
@@ -332,7 +332,16 @@ export default function AttendanceTodayPage() {
                             {period !== 'day' && (
                               <td className="p-4 text-muted-foreground">{item.dateMexico}</td>
                             )}
-                            <td className="p-4 text-muted-foreground">{item.event?.name || 'General'}</td>
+                            <td className="p-4 text-muted-foreground">
+                              <div className="flex flex-col gap-0.5 leading-snug">
+                                {(item.eventNames?.length
+                                  ? item.eventNames
+                                  : [item.event?.name || 'General']
+                                ).map((name) => (
+                                  <span key={name}>{name}</span>
+                                ))}
+                              </div>
+                            </td>
                             <td className="p-4">
                               <span className="font-mono font-bold text-leaf-dark">{item.participant.code}</span>
                             </td>
