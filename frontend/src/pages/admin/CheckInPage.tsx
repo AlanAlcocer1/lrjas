@@ -28,7 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { attendanceApi, catalogApi, participantsApi } from '@/services/api';
+import { attendanceApi, catalogApi, eventsApi, participantsApi } from '@/services/api';
 import { describeCameraError, startQrScanner, stopQrScanner } from '@/lib/qr-scanner';
 import {
   applyNingunoStake,
@@ -37,7 +37,9 @@ import {
   validateMemberStake,
   MEMBER_FIELD_NAME,
 } from '@/lib/member-field';
-import type { ParticipantCompleteness, Stake } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import type { EventItem, ParticipantCompleteness, Stake } from '@/types';
 
 const CAMERA_PERMISSION_KEY = 'lrjas_camera_granted';
 
@@ -83,6 +85,8 @@ export default function CheckInPage() {
   const [fillWardId, setFillWardId] = useState('');
   const [fillDynamicFields, setFillDynamicFields] = useState<Record<string, boolean>>({});
   const [savingFields, setSavingFields] = useState(false);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [eventId, setEventId] = useState('');
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const startingRef = useRef(false);
   const lastScanRef = useRef<{ code: string; at: number }>({ code: '', at: 0 });
@@ -100,7 +104,7 @@ export default function CheckInPage() {
         alreadyRegistered: res.alreadyRegistered,
       });
       if (res.alreadyRegistered) {
-        toast.warning('Usuario ya cuenta con asistencia el día de hoy');
+        toast.warning('Usuario ya cuenta con asistencia en este evento hoy');
       } else {
         toast.success('Asistencia registrada');
       }
@@ -118,12 +122,23 @@ export default function CheckInPage() {
 
   const performRegister = useCallback(
     async (code: string, method: 'QR' | 'MANUAL') => {
-      const res = await attendanceApi.register(code, method);
+      if (!eventId) {
+        toast.error('Selecciona un evento');
+        return;
+      }
+      const res = await attendanceApi.register(code, method, eventId);
       showCheckInResult(res);
       clearIncompleteFlow();
     },
-    [clearIncompleteFlow, showCheckInResult],
+    [clearIncompleteFlow, eventId, showCheckInResult],
   );
+
+  useEffect(() => {
+    eventsApi
+      .getActive()
+      .then(setEvents)
+      .catch(() => toast.error('Error al cargar eventos'));
+  }, []);
 
   const initIncompleteForm = useCallback((data: ParticipantCompleteness) => {
     const defaults: Record<string, boolean> = { ...data.profile.dynamicFields };
@@ -149,6 +164,10 @@ export default function CheckInPage() {
 
   const registerAttendance = useCallback(
     async (code: string, method: 'QR' | 'MANUAL', skipIncompleteCheck = false) => {
+      if (!eventId) {
+        toast.error('Selecciona un evento');
+        return;
+      }
       setSubmitting(true);
       try {
         if (!skipIncompleteCheck) {
@@ -170,7 +189,7 @@ export default function CheckInPage() {
         setSubmitting(false);
       }
     },
-    [clearIncompleteFlow, initIncompleteForm, performRegister],
+    [clearIncompleteFlow, eventId, initIncompleteForm, performRegister],
   );
 
   const handleSkipIncomplete = async () => {
@@ -334,6 +353,27 @@ export default function CheckInPage() {
               <h1 className="text-2xl font-bold mb-1">Registro de asistencia</h1>
               <p className="text-sm text-muted-foreground">Escanea QR o ingresa código manual</p>
             </div>
+
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <Label>Evento</Label>
+                <Select value={eventId || undefined} onValueChange={setEventId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un evento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {events.map((ev) => (
+                      <SelectItem key={ev.id} value={ev.id}>
+                        {ev.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!eventId && (
+                  <p className="text-xs text-amber-700">Elige un evento para empezar a checar</p>
+                )}
+              </CardContent>
+            </Card>
 
             <div className="flex gap-2 p-1 bg-muted rounded-xl border border-border">
               <Button

@@ -46,14 +46,14 @@ const COLORS = ['#84BD31', '#4B7914', '#006837', '#A2C95D', '#5B7235', '#538D4E'
 
 const defaultKpis = [
   { key: 'totalParticipants' as const, label: 'Usuarios en el sistema', icon: Users, color: 'text-leaf-dark', hint: 'Cuentas activas registradas' },
-  { key: 'totalAttendances' as const, label: 'Asistencias totales', icon: UserCheck, color: 'text-leaf', hint: 'Check-ins acumulados' },
+  { key: 'totalAttendances' as const, label: 'Asistencias totales', icon: UserCheck, color: 'text-leaf', hint: 'Personas-día únicas (varios eventos el mismo día = 1)' },
   { key: 'newThisMonth' as const, label: 'Nuevos usuarios (mes)', icon: UserPlus, color: 'text-leaf-darker', hint: 'Registros de cuenta este mes' },
   { key: 'activeParticipants' as const, label: 'Asistieron (30 días)', icon: Activity, color: 'text-amber-600', hint: 'Personas distintas con al menos 1 check-in' },
   { key: 'totalVisitors' as const, label: 'Visitantes', icon: MapPinned, color: 'text-sky-700', hint: 'Miembros de otra estaca / ciudad' },
 ];
 
 const filteredKpis = [
-  { key: 'totalAttendances' as const, label: 'Check-ins en periodo', icon: UserCheck, color: 'text-leaf', hint: 'Total de asistencias registradas' },
+  { key: 'totalAttendances' as const, label: 'Asistencias en periodo', icon: UserCheck, color: 'text-leaf', hint: 'Personas-día únicas en el periodo' },
   { key: 'activeParticipants' as const, label: 'Personas que asistieron', icon: Activity, color: 'text-amber-600', hint: 'Usuarios distintos con check-in' },
   { key: 'newThisMonth' as const, label: 'Nuevos usuarios', icon: UserPlus, color: 'text-leaf-darker', hint: 'Cuentas creadas en el periodo (no check-ins)' },
   { key: 'totalVisitors' as const, label: 'Visitantes', icon: MapPinned, color: 'text-sky-700', hint: 'Visitantes entre quienes asistieron' },
@@ -470,6 +470,41 @@ export default function DashboardPage() {
                         />
                         <Tooltip contentStyle={tooltipStyle} />
                         <Bar dataKey="count" fill="#4B7914" radius={[0, 4, 4, 0]} isAnimationActive={false} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+
+              <Card data-pdf-section data-pdf-kind="chart" className="min-w-0 overflow-hidden">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm sm:text-base">Asistencias por evento{distributionSuffix}</CardTitle>
+                </CardHeader>
+                <CardContent className="px-2 sm:px-6">
+                  <ChartContainer
+                    loading={loading}
+                    height={Math.max(chartHeight, (stats?.charts.eventDistribution?.length ?? 0) * (isMobile ? 30 : 26) + 40)}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={stats?.charts.eventDistribution ?? []}
+                        layout="vertical"
+                        margin={{ left: isMobile ? 4 : 8, right: 8 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#dce8cc" />
+                        <XAxis type="number" stroke="#5b7235" fontSize={axisFontSize} allowDecimals={false} />
+                        <YAxis
+                          dataKey="event"
+                          type="category"
+                          stroke="#5b7235"
+                          fontSize={isMobile ? 11 : 12}
+                          width={isMobile ? 88 : 110}
+                          tickFormatter={(value: string) =>
+                            value.length > 18 ? `${value.slice(0, 18)}…` : value
+                          }
+                        />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Bar dataKey="count" fill="#84BD31" radius={[0, 4, 4, 0]} isAnimationActive={false} />
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
