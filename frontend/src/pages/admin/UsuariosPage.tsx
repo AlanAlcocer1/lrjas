@@ -573,7 +573,11 @@ export default function UsuariosPage() {
                   <div key={a.id} className="flex items-center justify-between p-3 rounded-lg bg-muted">
                     <div>
                       <p className="text-sm">{formatDate(a.createdAt)}</p>
-                      <p className="text-xs text-muted-foreground">{formatTime(a.createdAt)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatTime(a.createdAt)}
+                        {' · '}
+                        {a.event?.name || 'General'}
+                      </p>
                     </div>
                     <Badge variant="outline">{a.method === 'QR' ? 'QR' : 'Manual'}</Badge>
                   </div>

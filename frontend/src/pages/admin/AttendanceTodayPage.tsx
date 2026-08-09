@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CalendarCheck, RefreshCw, ScanLine, Hash, FileSpreadsheet, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge, EmptyState, Skeleton } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -15,11 +16,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { attendanceApi, fieldsApi, getApiErrorMessage } from '@/services/api';
+import { attendanceApi, eventsApi, fieldsApi, getApiErrorMessage } from '@/services/api';
 import { exportToExcel, buildDynamicFieldColumns } from '@/lib/export';
 import { mexicoDateKey } from '@/lib/mexico-time';
 import { cn } from '@/lib/utils';
-import type { FieldDefinition, TodayAttendanceItem, TodayAttendanceResponse } from '@/types';
+import type { EventItem, FieldDefinition, TodayAttendanceItem, TodayAttendanceResponse } from '@/types';
 
 type Period = 'day' | 'week' | 'month';
 
@@ -29,9 +30,60 @@ const periodLabels: Record<Period, string> = {
   month: 'Mes',
 };
 
+const MONTH_NAMES = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
+
+const WEEKDAY_OPTIONS = [
+  { value: 'all', label: 'Todos los días' },
+  { value: '1', label: 'Lunes' },
+  { value: '2', label: 'Martes' },
+  { value: '3', label: 'Miércoles' },
+  { value: '4', label: 'Jueves' },
+  { value: '5', label: 'Viernes' },
+  { value: '6', label: 'Sábado' },
+  { value: '0', label: 'Domingo' },
+];
+
+function monthKeyFromDateKey(dateKey: string) {
+  return dateKey.slice(0, 7);
+}
+
+function firstDayOfMonthKey(monthKey: string) {
+  return `${monthKey}-01`;
+}
+
+function buildMonthOptions(monthsBack = 24) {
+  const today = mexicoDateKey();
+  const [y, m] = today.split('-').map(Number);
+  const options: { value: string; label: string }[] = [];
+  for (let i = 0; i < monthsBack; i++) {
+    const date = new Date(Date.UTC(y, m - 1 - i, 1, 12, 0, 0));
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth() + 1;
+    const value = `${year}-${String(month).padStart(2, '0')}`;
+    options.push({ value, label: `${MONTH_NAMES[month - 1]} ${year}` });
+  }
+  return options;
+}
+
 export default function AttendanceTodayPage() {
   const [period, setPeriod] = useState<Period>('day');
   const [dateKey, setDateKey] = useState(mexicoDateKey());
+  const [eventFilter, setEventFilter] = useState('all');
+  const [weekdayFilter, setWeekdayFilter] = useState('all');
+  const [events, setEvents] = useState<EventItem[]>([]);
   const [data, setData] = useState<TodayAttendanceResponse | null>(null);
   const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,28 +91,41 @@ export default function AttendanceTodayPage() {
   const [deleting, setDeleting] = useState(false);
 
   const isToday = dateKey === mexicoDateKey();
+  const monthOptions = useMemo(() => buildMonthOptions(), []);
+  const monthKey = monthKeyFromDateKey(dateKey);
 
   useEffect(() => {
     fieldsApi.getActive().then(setFields);
+    eventsApi.getAll().then(setEvents).catch(() => toast.error('Error al cargar eventos'));
   }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setData(await attendanceApi.getRange(period, dateKey));
+      const queryDate = period === 'month' ? firstDayOfMonthKey(monthKeyFromDateKey(dateKey)) : dateKey;
+      setData(
+        await attendanceApi.getRange(period, queryDate, {
+          eventId: eventFilter === 'all' ? undefined : eventFilter,
+          weekday: weekdayFilter === 'all' ? undefined : Number(weekdayFilter),
+        }),
+      );
     } catch {
       toast.error('Error al cargar asistencias');
     } finally {
       setLoading(false);
     }
-  }, [period, dateKey]);
+  }, [period, dateKey, eventFilter, weekdayFilter]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const selectPeriod = (p: Period) => {
-    if (p === 'day') setDateKey(mexicoDateKey());
+    if (p === 'day') {
+      setDateKey(mexicoDateKey());
+    } else if (p === 'month') {
+      setDateKey(firstDayOfMonthKey(monthKeyFromDateKey(mexicoDateKey())));
+    }
     setPeriod(p);
   };
 
@@ -97,6 +162,7 @@ export default function AttendanceTodayPage() {
       data.items.map((item, i) => ({
         '#': i + 1,
         ...(period !== 'day' ? { Fecha: item.dateMexico ?? '' } : {}),
+        Evento: item.event?.name || 'General',
         Código: item.participant.code,
         Nombre: item.participant.fullName,
         Estaca: item.participant.stake,
@@ -109,6 +175,14 @@ export default function AttendanceTodayPage() {
     );
     toast.success('Excel descargado');
   };
+
+  const badgeLabel = (() => {
+    if (!data) return '0 registrados';
+    if (eventFilter === 'all' && (data.recordsTotal ?? data.total) > data.total) {
+      return `${data.total} personas · ${data.recordsTotal} registros`;
+    }
+    return `${data.total} registrados`;
+  })();
 
   return (
     <AdminLayout>
@@ -123,7 +197,7 @@ export default function AttendanceTodayPage() {
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant="success" className="text-sm px-3 py-1">
-                    {data?.total ?? 0} registrados
+                    {badgeLabel}
                   </Badge>
                   <Button variant="outline" size="sm" onClick={exportExcel} className="gap-2">
                     <FileSpreadsheet className="h-4 w-4" />
@@ -136,31 +210,79 @@ export default function AttendanceTodayPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex gap-1 p-1 bg-muted rounded-xl border border-border">
-                  {(Object.keys(periodLabels) as Period[]).map((p) => (
-                    <Button
-                      key={p}
-                      variant={period === p ? 'default' : 'ghost'}
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => selectPeriod(p)}
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex gap-1 p-1 bg-muted rounded-xl border border-border">
+                    {(Object.keys(periodLabels) as Period[]).map((p) => (
+                      <Button
+                        key={p}
+                        variant={period === p ? 'default' : 'ghost'}
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => selectPeriod(p)}
+                      >
+                        {periodLabels[p]}
+                      </Button>
+                    ))}
+                  </div>
+                  {period === 'month' ? (
+                    <Select
+                      value={monthKey}
+                      onValueChange={(value) => setDateKey(firstDayOfMonthKey(value))}
                     >
-                      {periodLabels[p]}
+                      <SelectTrigger className="sm:max-w-[220px]">
+                        <SelectValue placeholder="Selecciona mes" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {monthOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      type="date"
+                      value={dateKey}
+                      onChange={(e) => setDateKey(e.target.value || mexicoDateKey())}
+                      className="sm:max-w-[180px]"
+                    />
+                  )}
+                  {period === 'day' && !isToday && (
+                    <Button variant="outline" size="sm" onClick={goToToday}>
+                      Hoy
                     </Button>
-                  ))}
+                  )}
                 </div>
-                <Input
-                  type="date"
-                  value={dateKey}
-                  onChange={(e) => setDateKey(e.target.value || mexicoDateKey())}
-                  className="sm:max-w-[180px]"
-                />
-                {period === 'day' && !isToday && (
-                  <Button variant="outline" size="sm" onClick={goToToday}>
-                    Hoy
-                  </Button>
-                )}
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Select value={eventFilter} onValueChange={setEventFilter}>
+                    <SelectTrigger className="sm:max-w-[240px]">
+                      <SelectValue placeholder="Evento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos (general)</SelectItem>
+                      {events.map((ev) => (
+                        <SelectItem key={ev.id} value={ev.id}>
+                          {ev.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={weekdayFilter} onValueChange={setWeekdayFilter}>
+                    <SelectTrigger className="sm:max-w-[220px]">
+                      <SelectValue placeholder="Día de la semana" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WEEKDAY_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           </FadeIn>
@@ -187,6 +309,7 @@ export default function AttendanceTodayPage() {
                         <tr className="border-b border-border text-muted-foreground">
                           <th className="text-left p-4 font-medium">#</th>
                           {period !== 'day' && <th className="text-left p-4 font-medium">Fecha</th>}
+                          <th className="text-left p-4 font-medium">Evento</th>
                           <th className="text-left p-4 font-medium">Código</th>
                           <th className="text-left p-4 font-medium">Nombre</th>
                           <th className="text-left p-4 font-medium hidden md:table-cell">Estaca</th>
@@ -209,6 +332,7 @@ export default function AttendanceTodayPage() {
                             {period !== 'day' && (
                               <td className="p-4 text-muted-foreground">{item.dateMexico}</td>
                             )}
+                            <td className="p-4 text-muted-foreground">{item.event?.name || 'General'}</td>
                             <td className="p-4">
                               <span className="font-mono font-bold text-leaf-dark">{item.participant.code}</span>
                             </td>
@@ -267,6 +391,8 @@ export default function AttendanceTodayPage() {
                 <span className="font-mono font-semibold text-leaf-dark">
                   {pendingDelete.participant.code}
                 </span>
+                {' · '}
+                {pendingDelete.event?.name || 'General'}
                 {' · '}
                 {pendingDelete.timeMexico}
                 {pendingDelete.dateMexico ? ` · ${pendingDelete.dateMexico}` : ''}

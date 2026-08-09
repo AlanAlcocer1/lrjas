@@ -76,6 +76,7 @@ export interface TodayAttendanceItem {
   createdAt: string;
   dateMexico?: string;
   timeMexico: string;
+  event?: { id: string; name: string };
   participant: {
     code: string;
     fullName: string;
@@ -90,7 +91,18 @@ export interface TodayAttendanceResponse {
   date: string;
   dateKey?: string;
   total: number;
+  uniqueTotal?: number;
+  recordsTotal?: number;
   items: TodayAttendanceItem[];
+}
+
+export interface EventItem {
+  id: string;
+  name: string;
+  active: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AdminUser {
@@ -131,6 +143,7 @@ export interface DashboardStats {
     ageDistribution: { range: string; count: number }[];
     stakeDistribution: { stake: string; count: number }[];
     fieldDistributions: FieldDistribution[];
+    eventDistribution?: { event: string; count: number }[];
   };
 }
 

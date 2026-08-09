@@ -130,12 +130,28 @@ model Attendance {
   id            String           @id @default(uuid())
   participantId String           @map("participant_id")
   participant   Participant      @relation(fields: [participantId], references: [id])
+  eventId       String           @map("event_id")
+  event         Event            @relation(fields: [eventId], references: [id])
   method        AttendanceMethod
   dateMexico    String           @map("date_mexico")
   createdAt     DateTime         @default(now()) @map("created_at")
 
-  @@unique([participantId, dateMexico])
+  @@unique([participantId, dateMexico, eventId])
+  @@index([dateMexico])
+  @@index([eventId])
   @@map("attendances")
+}
+
+model Event {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  active      Boolean      @default(true)
+  sortOrder   Int          @default(0) @map("sort_order")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  attendances Attendance[]
+
+  @@map("events")
 }
 
 model SocialPost {

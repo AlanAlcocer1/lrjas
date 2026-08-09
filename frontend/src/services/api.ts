@@ -15,6 +15,7 @@ import type {
   AdminUser,
   TodayAttendanceResponse,
   SocialPost,
+  EventItem,
 } from '@/types';
 
 const api = axios.create({
@@ -73,19 +74,42 @@ export const participantsApi = {
   remove: (id: string) => api.delete(`/participants/${id}`).then((r) => r.data),
 };
 
+export const eventsApi = {
+  getActive: () => api.get<EventItem[]>('/events').then((r) => r.data),
+  getAll: () => api.get<EventItem[]>('/events?all=true').then((r) => r.data),
+  create: (data: { name: string; active?: boolean; sortOrder?: number }) =>
+    api.post<EventItem>('/events', data).then((r) => r.data),
+  update: (id: string, data: Partial<{ name: string; active: boolean; sortOrder: number }>) =>
+    api.put<EventItem>(`/events/${id}`, data).then((r) => r.data),
+  remove: (id: string) => api.delete(`/events/${id}`).then((r) => r.data),
+};
+
 export const attendanceApi = {
-  register: (code: string, method: 'QR' | 'MANUAL') =>
+  register: (code: string, method: 'QR' | 'MANUAL', eventId: string) =>
     api.post<{
       alreadyRegistered: boolean;
       participant: { id: string; code: string; fullName: string };
-      attendance: { id: string; createdAt: string };
-    }>('/attendance', { code, method }).then((r) => r.data),
+      attendance: { id: string; createdAt: string; event?: { id: string; name: string } };
+    }>('/attendance', { code, method, eventId }).then((r) => r.data),
   getHistory: (participantId: string) =>
-    api.get<{ id: string; method: string; createdAt: string }[]>(`/attendance/history/${participantId}`).then((r) => r.data),
+    api.get<{ id: string; method: string; createdAt: string; event?: { id: string; name: string } }[]>(`/attendance/history/${participantId}`).then((r) => r.data),
   getToday: () =>
     api.get<TodayAttendanceResponse>('/attendance/today').then((r) => r.data),
-  getRange: (period: 'day' | 'week' | 'month', date?: string) =>
-    api.get<TodayAttendanceResponse>('/attendance/range', { params: { period, date } }).then((r) => r.data),
+  getRange: (
+    period: 'day' | 'week' | 'month',
+    date?: string,
+    opts?: { eventId?: string; weekday?: number },
+  ) =>
+    api
+      .get<TodayAttendanceResponse>('/attendance/range', {
+        params: {
+          period,
+          date,
+          ...(opts?.eventId ? { eventId: opts.eventId } : {}),
+          ...(opts?.weekday !== undefined ? { weekday: opts.weekday } : {}),
+        },
+      })
+      .then((r) => r.data),
   remove: (id: string) => api.delete(`/attendance/${id}`).then((r) => r.data),
 };
 

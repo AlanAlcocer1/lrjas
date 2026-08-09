@@ -21,7 +21,12 @@ export class AttendanceController {
   @Get('range')
   @UseGuards(JwtAuthGuard)
   getRange(@Query() query: AttendanceRangeQueryDto) {
-    return this.attendanceService.getRangeList(query.period, query.date);
+    return this.attendanceService.getRangeList(
+      query.period,
+      query.date,
+      query.eventId,
+      query.weekday,
+    );
   }
 
   @Get('history/:participantId')

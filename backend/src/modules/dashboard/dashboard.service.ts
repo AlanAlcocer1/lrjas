@@ -134,6 +134,59 @@ export class DashboardService {
     return new Map(rows.map((r) => [r.reg_date, Number(r.count)]));
   }
 
+  private async countUniquePersonDays(from?: string, to?: string): Promise<number> {
+    if (from && to) {
+      const rows = await this.prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(*)::bigint AS count
+        FROM (
+          SELECT DISTINCT participant_id, date_mexico
+          FROM attendances
+          WHERE date_mexico >= ${from} AND date_mexico <= ${to}
+        ) t
+      `;
+      return Number(rows[0]?.count ?? 0);
+    }
+    const rows = await this.prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(*)::bigint AS count
+      FROM (
+        SELECT DISTINCT participant_id, date_mexico
+        FROM attendances
+      ) t
+    `;
+    return Number(rows[0]?.count ?? 0);
+  }
+
+  private async countUniquePersonDaysForDay(key: string): Promise<number> {
+    const rows = await this.prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(DISTINCT participant_id)::bigint AS count
+      FROM attendances
+      WHERE date_mexico = ${key}
+    `;
+    return Number(rows[0]?.count ?? 0);
+  }
+
+  private async getEventDistribution(from?: string, to?: string) {
+    const rows =
+      from && to
+        ? await this.prisma.$queryRaw<{ name: string; count: bigint }[]>`
+            SELECT COALESCE(e.name, 'General') AS name, COUNT(a.id)::bigint AS count
+            FROM attendances a
+            LEFT JOIN events e ON e.id = a.event_id
+            WHERE a.date_mexico >= ${from} AND a.date_mexico <= ${to}
+            GROUP BY e.name
+            ORDER BY count DESC, name ASC
+          `
+        : await this.prisma.$queryRaw<{ name: string; count: bigint }[]>`
+            SELECT COALESCE(e.name, 'General') AS name, COUNT(a.id)::bigint AS count
+            FROM attendances a
+            LEFT JOIN events e ON e.id = a.event_id
+            GROUP BY e.name
+            ORDER BY count DESC, name ASC
+          `;
+
+    return rows.map((r) => ({ event: r.name, count: Number(r.count) }));
+  }
+
   private async getDefaultStats() {
     const hasDateMexico = await this.usesDateMexico();
     const thirtyDaysFrom = this.mexicoDateKeyDaysAgo(30);
@@ -153,9 +206,10 @@ export class DashboardService {
       monthlyRegistrations,
       fieldDistributions,
       ageDistribution,
+      eventDistribution,
     ] = await Promise.all([
       this.prisma.participant.count({ where: { active: true } }),
-      this.prisma.attendance.count(),
+      this.countUniquePersonDays(),
       this.countRegistrationsByMexicoDateRange(monthFromKey, today),
       this.prisma.participant.count({ where: attendedWhere }),
       this.prisma.participant.count({ where: { active: true, type: ParticipantType.VISITOR } }),
@@ -173,6 +227,7 @@ export class DashboardService {
       this.getMonthlyRegistrationsByMexicoDate(),
       this.getFieldDistributions(),
       this.getAgeDistribution({ active: true }),
+      this.getEventDistribution(),
     ]);
 
     const stakes = await this.prisma.stake.findMany();
@@ -200,6 +255,7 @@ export class DashboardService {
         })),
         fieldDistributions,
         ageDistribution,
+        eventDistribution,
       },
     };
   }
@@ -223,9 +279,10 @@ export class DashboardService {
       periodRegistrations,
       fieldDistributions,
       ageDistribution,
+      eventDistribution,
     ] = await Promise.all([
       this.prisma.participant.count({ where: { active: true } }),
-      this.prisma.attendance.count({ where: attendanceWhere }),
+      this.countUniquePersonDays(range.from, range.to),
       this.countRegistrationsByMexicoDateRange(range.from, range.to),
       this.prisma.participant.count({ where: attendedWhere }),
       this.prisma.participant.count({
@@ -245,6 +302,7 @@ export class DashboardService {
       this.getPeriodRegistrations(dateKeys, range),
       this.getFieldDistributions(attendedWhere),
       this.getAgeDistribution(attendedWhere),
+      this.getEventDistribution(range.from, range.to),
     ]);
 
     const stakes = await this.prisma.stake.findMany();
@@ -272,6 +330,7 @@ export class DashboardService {
         })),
         fieldDistributions,
         ageDistribution,
+        eventDistribution,
       },
     };
   }
@@ -338,7 +397,7 @@ export class DashboardService {
 
   private async countAttendancesForDay(key: string, hasDateMexico: boolean): Promise<number> {
     if (hasDateMexico) {
-      return this.prisma.attendance.count({ where: { dateMexico: key } });
+      return this.countUniquePersonDaysForDay(key);
     }
     const { start, end } = getMexicoDayBoundsFromKey(key);
     return this.prisma.attendance.count({ where: { createdAt: { gte: start, lt: end } } });
@@ -350,9 +409,11 @@ export class DashboardService {
     for (let i = 5; i >= 0; i--) {
       const { year, month } = this.mexicoYearMonthDaysAgo(i);
       const { from, to } = this.mexicoMonthRange(year, month);
-      const count = await this.prisma.attendance.count({
-        where: this.attendanceCountWhere(from, to, hasDateMexico),
-      });
+      const count = hasDateMexico
+        ? await this.countUniquePersonDays(from, to)
+        : await this.prisma.attendance.count({
+            where: this.attendanceCountWhere(from, to, hasDateMexico),
+          });
       months.push({
         month: formatMexicoMonthLabel(year, month),
         count,

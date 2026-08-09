@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Loader2, ChevronRight, AlertCircle, ArrowLeft, Users, UserX, MapPinned } from 'lucide-react';
+import { Loader2, ChevronRight, AlertCircle, ArrowLeft, Users, MapPinned } from 'lucide-react';
 import { toast } from 'sonner';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
@@ -55,7 +55,8 @@ const typeOptions: {
   icon: typeof Users;
 }[] = [
   { type: 'MEMBER', title: 'Miembro', icon: Users },
-  { type: 'NON_MEMBER', title: 'No miembro', icon: UserX },
+  // Oculto: se mantiene el flujo NON_MEMBER en backend/admin, pero no en registro público.
+  // { type: 'NON_MEMBER', title: 'No miembro' },
   { type: 'VISITOR', title: 'Visitante', icon: MapPinned },
 ];
 

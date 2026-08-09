@@ -11,6 +11,7 @@ import {
   X,
   MapPin,
   Terminal,
+  CalendarDays,
 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +28,7 @@ const baseNavItems = [
   { to: '/admin/check-in', icon: ScanLine, label: 'Check-in' },
   { to: '/admin/attendance-today', icon: CalendarCheck, label: 'Asistencias' },
   { to: '/admin/stakes', icon: MapPin, label: 'Estacas' },
+  { to: '/admin/events', icon: CalendarDays, label: 'Eventos' },
   { to: '/admin/fields', icon: Settings2, label: 'Formularios' },
   // Oculto: se mantiene la ruta /admin/redes y el código, pero no se muestra en el menú.
   // { to: '/admin/redes', icon: Share2, label: 'Redes' },
