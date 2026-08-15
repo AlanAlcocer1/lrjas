@@ -33,6 +33,9 @@ export class EventsService {
 
   async create(dto: CreateEventDto) {
     const name = dto.name.trim();
+    if (name.toLowerCase() === GENERAL_EVENT_NAME.toLowerCase()) {
+      throw new BadRequestException('Ese nombre está reservado');
+    }
     const existing = await this.prisma.event.findUnique({ where: { name } });
     if (existing) throw new ConflictException('Ya existe un evento con ese nombre');
 

@@ -85,12 +85,12 @@ export const eventsApi = {
 };
 
 export const attendanceApi = {
-  register: (code: string, method: 'QR' | 'MANUAL', eventId: string) =>
+  register: (code: string, method: 'QR' | 'MANUAL', eventId?: string) =>
     api.post<{
       alreadyRegistered: boolean;
       participant: { id: string; code: string; fullName: string };
       attendance: { id: string; createdAt: string; event?: { id: string; name: string } };
-    }>('/attendance', { code, method, eventId }).then((r) => r.data),
+    }>('/attendance', { code, method, ...(eventId ? { eventId } : {}) }).then((r) => r.data),
   getHistory: (participantId: string) =>
     api.get<{ id: string; method: string; createdAt: string; event?: { id: string; name: string } }[]>(`/attendance/history/${participantId}`).then((r) => r.data),
   getToday: () =>
