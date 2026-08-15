@@ -9,8 +9,9 @@ export class CreateAttendanceDto {
   @IsEnum(AttendanceMethod)
   method!: AttendanceMethod;
 
+  @IsOptional()
   @IsUUID()
-  eventId!: string;
+  eventId?: string;
 }
 
 export class AttendanceRangeQueryDto {

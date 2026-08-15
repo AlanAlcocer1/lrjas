@@ -72,6 +72,14 @@ export function parseMexicoDate(dateKey: string): Date {
   return zonedLocalToUtc(dateKey, 12, 0, 0);
 }
 
+/** Fecha calendario YYYY-MM-DD sin correr un día por zona horaria. */
+export function calendarDateKey(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export function ageFromBirthDateKey(birthDateKey: string, todayKey?: string): number {
   const today = todayKey ?? mexicoDateKey();
   const [ty, tm, td] = today.split('-').map(Number);

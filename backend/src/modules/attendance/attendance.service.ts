@@ -64,7 +64,9 @@ export class AttendanceService {
     if (!participant) throw new NotFoundException('Usuario no encontrado');
     if (!participant.active) throw new BadRequestException('Usuario inactivo');
 
-    const event = await this.prisma.event.findUnique({ where: { id: dto.eventId } });
+    const event = dto.eventId
+      ? await this.prisma.event.findUnique({ where: { id: dto.eventId } })
+      : await this.prisma.event.findUnique({ where: { name: GENERAL_EVENT_NAME } });
     if (!event || !event.active) throw new BadRequestException('Evento inválido o inactivo');
 
     const todayKey = mexicoDateKey();

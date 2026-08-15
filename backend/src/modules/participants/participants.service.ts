@@ -12,7 +12,7 @@ import {
 } from './dto/participant.dto';
 import { Prisma } from '@prisma/client';
 import { ParticipantType } from '@prisma/client';
-import { ageFromBirthDateKey, parseMexicoDate } from '../../common/mexico-time';
+import { ageFromBirthDateKey, calendarDateKey, parseMexicoDate } from '../../common/mexico-time';
 import { NONE_STAKE_NAME, NONE_WARD_NAME } from '../../bootstrap/ensure-ninguno-stake';
 import { OTRO_STAKE_NAME, OTRO_WARD_NAME } from '../../bootstrap/ensure-otro-stake';
 import { MEMBER_FIELD_NAME, inferIsMember } from '../../bootstrap/ensure-miembro-field';
@@ -65,7 +65,7 @@ export class ParticipantsService {
       motherLastName: participant.motherLastName,
       fullName,
       age: participant.age,
-      birthDate: participant.birthDate.toISOString().slice(0, 10),
+      birthDate: calendarDateKey(participant.birthDate),
       sex: participant.sex,
       type: participant.type,
       visitorStake: participant.visitorStake,

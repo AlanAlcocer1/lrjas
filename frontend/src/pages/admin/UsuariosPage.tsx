@@ -432,7 +432,7 @@ export default function UsuariosPage() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Código</span><span className="font-mono font-bold">{selected.code}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Nombre</span><span>{selected.fullName}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Edad</span><span>{selected.age}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Fecha de nacimiento</span><span>{selected.birthDate}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Fecha de nacimiento</span><span>{formatDate(selected.birthDate)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Sexo</span><span>{selected.sex === 'MALE' ? 'Masculino' : 'Femenino'}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Tipo</span><span>{PARTICIPANT_TYPE_LABELS[selected.type ?? 'MEMBER']}</span></div>
                 {(selected.type === 'MEMBER' || !selected.type) && (

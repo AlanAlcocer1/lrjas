@@ -122,11 +122,7 @@ export default function CheckInPage() {
 
   const performRegister = useCallback(
     async (code: string, method: 'QR' | 'MANUAL') => {
-      if (!eventId) {
-        toast.error('Selecciona un evento');
-        return;
-      }
-      const res = await attendanceApi.register(code, method, eventId);
+      const res = await attendanceApi.register(code, method, eventId || undefined);
       showCheckInResult(res);
       clearIncompleteFlow();
     },
@@ -136,7 +132,16 @@ export default function CheckInPage() {
   useEffect(() => {
     eventsApi
       .getActive()
-      .then(setEvents)
+      .then((list) => {
+        const ordered = [...list].sort((a, b) => {
+          if (a.name === 'General') return -1;
+          if (b.name === 'General') return 1;
+          return a.name.localeCompare(b.name, 'es');
+        });
+        setEvents(ordered);
+        const general = ordered.find((ev) => ev.name === 'General');
+        setEventId((current) => current || general?.id || ordered[0]?.id || '');
+      })
       .catch(() => toast.error('Error al cargar eventos'));
   }, []);
 
@@ -164,10 +169,6 @@ export default function CheckInPage() {
 
   const registerAttendance = useCallback(
     async (code: string, method: 'QR' | 'MANUAL', skipIncompleteCheck = false) => {
-      if (!eventId) {
-        toast.error('Selecciona un evento');
-        return;
-      }
       setSubmitting(true);
       try {
         if (!skipIncompleteCheck) {
@@ -189,7 +190,7 @@ export default function CheckInPage() {
         setSubmitting(false);
       }
     },
-    [clearIncompleteFlow, eventId, initIncompleteForm, performRegister],
+    [clearIncompleteFlow, initIncompleteForm, performRegister],
   );
 
   const handleSkipIncomplete = async () => {
@@ -359,7 +360,7 @@ export default function CheckInPage() {
                 <Label>Evento</Label>
                 <Select value={eventId || undefined} onValueChange={setEventId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un evento" />
+                    <SelectValue placeholder="General" />
                   </SelectTrigger>
                   <SelectContent>
                     {events.map((ev) => (
@@ -369,9 +370,6 @@ export default function CheckInPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {!eventId && (
-                  <p className="text-xs text-amber-700">Elige un evento para empezar a checar</p>
-                )}
               </CardContent>
             </Card>
 

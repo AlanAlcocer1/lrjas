@@ -43,6 +43,10 @@ export default function EventsPage() {
       toast.error('Ingresa un nombre para el evento');
       return;
     }
+    if (form.name.trim().toLowerCase() === 'general') {
+      toast.error('Ese nombre está reservado');
+      return;
+    }
     setSubmitting(true);
     try {
       await eventsApi.create({
