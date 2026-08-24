@@ -68,6 +68,8 @@ const tooltipStyle = {
   color: '#1a3320',
 };
 
+const legendStyle = { fontSize: 13, color: '#1a3320', paddingTop: 4 };
+
 const barLabelStyle = { fill: '#1a3320', fontSize: 12, fontWeight: 700 as const };
 const barLabelInsideStyle = { fill: '#ffffff', fontSize: 12, fontWeight: 700 as const };
 
