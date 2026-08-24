@@ -446,17 +446,25 @@ export class DashboardService {
     periodStart: Date,
     periodEnd: Date,
   ) {
-    const useDaily = dateKeys.length <= 31;
-
-    if (useDaily) {
+    // Pocos días: diario. Periodo medio: por semana. Largo: por mes.
+    if (dateKeys.length <= 14) {
       const rows = await Promise.all(
         dateKeys.map(async (key) => {
           const count = await this.countAttendancesForDay(key, hasDateMexico);
-          const [, m, d] = key.split('-');
-          return { month: `${d}/${m}`, count };
+          return { month: formatMexicoDayLabel(key), count };
         }),
       );
       return rows;
+    }
+
+    if (dateKeys.length <= 62) {
+      const daily = await Promise.all(
+        dateKeys.map(async (key) => ({
+          key,
+          count: await this.countAttendancesForDay(key, hasDateMexico),
+        })),
+      );
+      return bucketByWeek(daily.map((d) => ({ key: d.key, count: d.count })));
     }
 
     if (hasDateMexico) {
@@ -472,6 +480,8 @@ export class DashboardService {
       }
       for (const row of grouped) {
         const monthLabel = parseMexicoDateKeyToMonth(row.dateMexico);
+        // Personas-día únicas aproximadas por día; sumar por mes desde daily unique es costoso,
+        // aquí usamos conteo de filas agrupadas por dateMexico (una fila por persona/día si unique).
         buckets.set(monthLabel, (buckets.get(monthLabel) ?? 0) + row._count.id);
       }
 
@@ -498,14 +508,17 @@ export class DashboardService {
   }
 
   private async getPeriodRegistrations(dateKeys: string[], range: DashboardDateRange) {
-    const useDaily = dateKeys.length <= 31;
     const counts = await this.registrationCountsByMexicoDateKeys(range.from, range.to);
 
-    if (useDaily) {
-      return dateKeys.map((key) => {
-        const [, m, d] = key.split('-');
-        return { month: `${d}/${m}`, count: counts.get(key) ?? 0 };
-      });
+    if (dateKeys.length <= 14) {
+      return dateKeys.map((key) => ({
+        month: formatMexicoDayLabel(key),
+        count: counts.get(key) ?? 0,
+      }));
+    }
+
+    if (dateKeys.length <= 62) {
+      return bucketByWeek(dateKeys.map((key) => ({ key, count: counts.get(key) ?? 0 })));
     }
 
     const buckets = new Map<string, number>();
@@ -517,7 +530,8 @@ export class DashboardService {
       buckets.set(monthLabel, (buckets.get(monthLabel) ?? 0) + count);
     }
 
-    return Array.from(buckets.entries()).map(([month, count]) => ({ month, count }));
+    const order = [...new Set(dateKeys.map(parseMexicoDateKeyToMonth))];
+    return order.map((month) => ({ month, count: buckets.get(month) ?? 0 }));
   }
 }
 
@@ -532,4 +546,44 @@ function formatMexicoMonthLabel(year: number, month: number): string {
 function parseMexicoDateKeyToMonth(key: string): string {
   const [y, m] = key.split('-').map(Number);
   return formatMexicoMonthLabel(y, m);
+}
+
+function formatMexicoDayLabel(key: string): string {
+  const [, m, d] = key.split('-');
+  return `${d}/${m}`;
+}
+
+/** Lunes de la semana calendario (UTC) de un YYYY-MM-DD. */
+function mondayKeyOf(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  const weekday = date.getUTCDay();
+  const mondayOffset = weekday === 0 ? 6 : weekday - 1;
+  const monday = new Date(Date.UTC(y, m - 1, d - mondayOffset, 12, 0, 0));
+  const yy = monday.getUTCFullYear();
+  const mm = String(monday.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(monday.getUTCDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+function weekBucketLabel(mondayKey: string): string {
+  const [, m, d] = mondayKey.split('-');
+  return `Sem ${d}/${m}`;
+}
+
+function bucketByWeek(rows: { key: string; count: number }[]): { month: string; count: number }[] {
+  const buckets = new Map<string, number>();
+  const order: string[] = [];
+  for (const row of rows) {
+    const monday = mondayKeyOf(row.key);
+    if (!buckets.has(monday)) {
+      buckets.set(monday, 0);
+      order.push(monday);
+    }
+    buckets.set(monday, (buckets.get(monday) ?? 0) + row.count);
+  }
+  return order.map((monday) => ({
+    month: weekBucketLabel(monday),
+    count: buckets.get(monday) ?? 0,
+  }));
 }

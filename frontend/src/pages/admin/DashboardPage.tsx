@@ -27,6 +27,7 @@ import {
   LineChart,
   Line,
   Legend,
+  LabelList,
 } from 'recharts';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
@@ -67,7 +68,32 @@ const tooltipStyle = {
   color: '#1a3320',
 };
 
-const legendStyle = { fontSize: 13, color: '#1a3320', paddingTop: 4 };
+const barLabelStyle = { fill: '#1a3320', fontSize: 12, fontWeight: 700 as const };
+const barLabelInsideStyle = { fill: '#ffffff', fontSize: 12, fontWeight: 700 as const };
+
+function PeriodTimeAxis({
+  dataLength,
+  isMobile,
+  axisFontSize,
+}: {
+  dataLength: number;
+  isMobile: boolean;
+  axisFontSize: number;
+}) {
+  const crowded = dataLength > 10;
+  return (
+    <XAxis
+      dataKey="month"
+      stroke="#5b7235"
+      fontSize={axisFontSize}
+      interval={crowded ? 'equidistantPreserveStart' : 0}
+      angle={crowded || isMobile ? -40 : 0}
+      textAnchor={crowded || isMobile ? 'end' : 'middle'}
+      height={crowded || isMobile ? 56 : 30}
+      minTickGap={crowded ? 8 : 4}
+    />
+  );
+}
 
 function withPiePercents<T extends { count: number }>(items: T[] | undefined) {
   const list = items ?? [];
@@ -223,6 +249,9 @@ export default function DashboardPage() {
   const attendanceTitle = hasFilter ? 'Check-ins en el periodo' : 'Asistencias por mes';
   const registrationTitle = hasFilter ? 'Nuevos usuarios en el periodo' : 'Nuevos usuarios por mes';
   const distributionSuffix = hasFilter ? ' (quienes asistieron)' : '';
+  const timeSeriesPoints = stats?.charts.monthlyAttendances?.length ?? 0;
+  const registrationPoints = stats?.charts.monthlyRegistrations?.length ?? 0;
+  const periodChartHeight = Math.max(chartHeight, hasFilter && timeSeriesPoints > 10 ? 260 : chartHeight);
 
   return (
     <AdminLayout>
@@ -329,22 +358,23 @@ export default function DashboardPage() {
                   <CardTitle className="text-sm sm:text-base">{attendanceTitle}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6">
-                  <ChartContainer loading={loading} height={chartHeight}>
+                  <ChartContainer loading={loading} height={periodChartHeight}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={stats?.charts.monthlyAttendances} margin={{ left: isMobile ? -16 : 0, right: 4 }}>
+                      <BarChart
+                        data={stats?.charts.monthlyAttendances}
+                        margin={{ left: isMobile ? -16 : 0, right: 8, top: 18, bottom: 4 }}
+                      >
                         <CartesianGrid strokeDasharray="3 3" stroke="#dce8cc" />
-                        <XAxis
-                          dataKey="month"
-                          stroke="#5b7235"
-                          fontSize={axisFontSize}
-                          interval={0}
-                          angle={isMobile ? -35 : 0}
-                          textAnchor={isMobile ? 'end' : 'middle'}
-                          height={isMobile ? 50 : 30}
+                        <PeriodTimeAxis
+                          dataLength={timeSeriesPoints}
+                          isMobile={isMobile}
+                          axisFontSize={axisFontSize}
                         />
-                        <YAxis stroke="#5b7235" fontSize={axisFontSize} width={isMobile ? 28 : 40} />
+                        <YAxis stroke="#5b7235" fontSize={axisFontSize} width={isMobile ? 28 : 40} allowDecimals={false} />
                         <Tooltip contentStyle={tooltipStyle} />
-                        <Bar dataKey="count" fill="#84BD31" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                        <Bar dataKey="count" fill="#84BD31" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                          <LabelList dataKey="count" position="top" style={barLabelStyle} />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
@@ -356,30 +386,49 @@ export default function DashboardPage() {
                   <CardTitle className="text-sm sm:text-base">{registrationTitle}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6">
-                  <ChartContainer loading={loading} height={chartHeight}>
+                  <ChartContainer loading={loading} height={periodChartHeight}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={stats?.charts.monthlyRegistrations} margin={{ left: isMobile ? -16 : 0, right: 4 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#dce8cc" />
-                        <XAxis
-                          dataKey="month"
-                          stroke="#5b7235"
-                          fontSize={axisFontSize}
-                          interval={0}
-                          angle={isMobile ? -35 : 0}
-                          textAnchor={isMobile ? 'end' : 'middle'}
-                          height={isMobile ? 50 : 30}
-                        />
-                        <YAxis stroke="#5b7235" fontSize={axisFontSize} width={isMobile ? 28 : 40} />
-                        <Tooltip contentStyle={tooltipStyle} />
-                        <Line
-                          type="monotone"
-                          dataKey="count"
-                          stroke="#4B7914"
-                          strokeWidth={2}
-                          dot={{ fill: '#4B7914', r: isMobile ? 3 : 4 }}
-                          isAnimationActive={false}
-                        />
-                      </LineChart>
+                      {hasFilter ? (
+                        <BarChart
+                          data={stats?.charts.monthlyRegistrations}
+                          margin={{ left: isMobile ? -16 : 0, right: 8, top: 18, bottom: 4 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#dce8cc" />
+                          <PeriodTimeAxis
+                            dataLength={registrationPoints}
+                            isMobile={isMobile}
+                            axisFontSize={axisFontSize}
+                          />
+                          <YAxis stroke="#5b7235" fontSize={axisFontSize} width={isMobile ? 28 : 40} allowDecimals={false} />
+                          <Tooltip contentStyle={tooltipStyle} />
+                          <Bar dataKey="count" fill="#4B7914" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                            <LabelList dataKey="count" position="top" style={barLabelStyle} />
+                          </Bar>
+                        </BarChart>
+                      ) : (
+                        <LineChart
+                          data={stats?.charts.monthlyRegistrations}
+                          margin={{ left: isMobile ? -16 : 0, right: 8, top: 18, bottom: 4 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#dce8cc" />
+                          <PeriodTimeAxis
+                            dataLength={registrationPoints}
+                            isMobile={isMobile}
+                            axisFontSize={axisFontSize}
+                          />
+                          <YAxis stroke="#5b7235" fontSize={axisFontSize} width={isMobile ? 28 : 40} allowDecimals={false} />
+                          <Tooltip contentStyle={tooltipStyle} />
+                          <Line
+                            type="monotone"
+                            dataKey="count"
+                            stroke="#4B7914"
+                            strokeWidth={2}
+                            dot={{ fill: '#4B7914', r: isMobile ? 3 : 4 }}
+                            label={{ position: 'top', fill: '#1a3320', fontSize: 12, fontWeight: 700 }}
+                            isAnimationActive={false}
+                          />
+                        </LineChart>
+                      )}
                     </ResponsiveContainer>
                   </ChartContainer>
                 </CardContent>
@@ -427,7 +476,7 @@ export default function DashboardPage() {
                 <CardContent className="px-2 sm:px-6">
                   <ChartContainer loading={loading} height={chartHeight}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={stats?.charts.ageDistribution} margin={{ left: isMobile ? -16 : 0, right: 4 }}>
+                      <BarChart data={stats?.charts.ageDistribution} margin={{ left: isMobile ? -16 : 0, right: 4, top: 18 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#dce8cc" />
                         <XAxis
                           dataKey="range"
@@ -437,7 +486,9 @@ export default function DashboardPage() {
                         />
                         <YAxis stroke="#5b7235" fontSize={axisFontSize} width={isMobile ? 28 : 40} allowDecimals={false} />
                         <Tooltip contentStyle={tooltipStyle} />
-                        <Bar dataKey="count" fill="#006837" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                        <Bar dataKey="count" fill="#006837" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                          <LabelList dataKey="count" position="top" style={barLabelStyle} />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
@@ -454,10 +505,10 @@ export default function DashboardPage() {
                       <BarChart
                         data={stats?.charts.stakeDistribution}
                         layout="vertical"
-                        margin={{ left: isMobile ? 4 : 8, right: 8 }}
+                        margin={{ left: isMobile ? 4 : 8, right: 36 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#dce8cc" />
-                        <XAxis type="number" stroke="#5b7235" fontSize={axisFontSize} />
+                        <XAxis type="number" stroke="#5b7235" fontSize={axisFontSize} allowDecimals={false} />
                         <YAxis
                           dataKey="stake"
                           type="category"
@@ -469,7 +520,13 @@ export default function DashboardPage() {
                           }
                         />
                         <Tooltip contentStyle={tooltipStyle} />
-                        <Bar dataKey="count" fill="#4B7914" radius={[0, 4, 4, 0]} isAnimationActive={false} />
+                        <Bar dataKey="count" fill="#4B7914" radius={[0, 4, 4, 0]} isAnimationActive={false}>
+                          <LabelList
+                            dataKey="count"
+                            position="insideRight"
+                            style={barLabelInsideStyle}
+                          />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
@@ -489,7 +546,7 @@ export default function DashboardPage() {
                       <BarChart
                         data={stats?.charts.eventDistribution ?? []}
                         layout="vertical"
-                        margin={{ left: isMobile ? 4 : 8, right: 8 }}
+                        margin={{ left: isMobile ? 4 : 8, right: 36 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#dce8cc" />
                         <XAxis type="number" stroke="#5b7235" fontSize={axisFontSize} allowDecimals={false} />
@@ -504,7 +561,13 @@ export default function DashboardPage() {
                           }
                         />
                         <Tooltip contentStyle={tooltipStyle} />
-                        <Bar dataKey="count" fill="#84BD31" radius={[0, 4, 4, 0]} isAnimationActive={false} />
+                        <Bar dataKey="count" fill="#84BD31" radius={[0, 4, 4, 0]} isAnimationActive={false}>
+                          <LabelList
+                            dataKey="count"
+                            position="insideRight"
+                            style={barLabelInsideStyle}
+                          />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
