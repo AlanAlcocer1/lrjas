@@ -37,12 +37,12 @@ export class ActividadesAuthService {
     const code =
       raw === MATRIMONIOS_ACCESS_CODE ? MATRIMONIOS_ACCESS_CODE : raw.padStart(3, '0');
 
-    // Asegura guest + rol Matrimonios aunque el bootstrap no haya corrido
+    // Matrimonios: asegura guest si aún no existe
     if (code === MATRIMONIOS_ACCESS_CODE) {
       await ensureMatrimoniosGuest(this.prisma);
     }
 
-    // Primer admin: 000 siempre recibe Administrador si existe en el padrón
+    // Solo si no hay ningún Administrador aún
     if (code === DEFAULT_ACTIVIDADES_ADMIN_CODE) {
       await ensureActividadesBootstrapAdmins(this.prisma);
     }

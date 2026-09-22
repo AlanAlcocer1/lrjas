@@ -6,8 +6,8 @@ import { SYSTEM_ROLE } from './ensure-default-access-roles';
 export const MATRIMONIOS_ACCESS_CODE = '1234';
 
 /**
- * Participante sintético "Matrimonios" (código 1234) con rol de solo lectura.
- * No es un usuario real del padron: entra a visualizar el comité.
+ * Asegura el participante 1234 + rol Matrimonios si faltan.
+ * No quita otros roles ni reescribe datos existentes.
  */
 export async function ensureMatrimoniosGuest(prisma: PrismaService) {
   const stake = await prisma.stake.findUnique({ where: { name: NONE_STAKE_NAME } });
@@ -46,22 +46,9 @@ export async function ensureMatrimoniosGuest(prisma: PrismaService) {
       },
     });
     participantId = created.id;
-  } else if (!existing.active) {
-    await prisma.participant.update({
-      where: { id: existing.id },
-      data: { active: true },
-    });
   }
 
   if (!participantId) return;
-
-  // Solo lectura: quita cualquier otro rol (p. ej. Administrador mal asignado)
-  await prisma.participantAccessRole.deleteMany({
-    where: {
-      participantId,
-      roleId: { not: role.id },
-    },
-  });
 
   await prisma.participantAccessRole.upsert({
     where: {

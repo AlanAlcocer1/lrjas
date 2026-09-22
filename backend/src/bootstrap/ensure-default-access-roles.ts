@@ -13,7 +13,7 @@ export type SystemRoleName = (typeof SYSTEM_ROLE)[keyof typeof SYSTEM_ROLE];
 
 const ALL_KEYS = ACTIVIDADES_PERMISSIONS.map((p) => p.key);
 
-/** Matriz de permisos por rol de sistema (se sincroniza en cada bootstrap). */
+/** Matriz inicial de permisos (solo al crear el rol por primera vez). */
 export const SYSTEM_ROLE_PERMISSIONS: Record<
   SystemRoleName,
   { description: string; permissionKeys: string[] }
@@ -88,8 +88,10 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<
 };
 
 /**
- * Crea/actualiza los 4 roles de sistema y sincroniza sus permisos.
- * Roles custom del usuario no se tocan.
+ * Crea los 4 roles de sistema solo si faltan.
+ * Si el rol ya existe, NO toca descripción, active ni permisos
+ * (para no pisar cambios hechos en la UI).
+ * Roles custom del usuario nunca se tocan.
  */
 export async function ensureDefaultAccessRoles(prisma: PrismaService) {
   const permissions = await prisma.permission.findMany({
@@ -103,14 +105,12 @@ export async function ensureDefaultAccessRoles(prisma: PrismaService) {
     SystemRoleName,
     (typeof SYSTEM_ROLE_PERMISSIONS)[SystemRoleName],
   ][]) {
-    const role = await prisma.accessRole.upsert({
-      where: { name },
-      create: {
+    const existing = await prisma.accessRole.findUnique({ where: { name } });
+    if (existing) continue;
+
+    const role = await prisma.accessRole.create({
+      data: {
         name,
-        description: def.description,
-        active: true,
-      },
-      update: {
         description: def.description,
         active: true,
       },
@@ -120,7 +120,6 @@ export async function ensureDefaultAccessRoles(prisma: PrismaService) {
       .map((key) => byKey.get(key))
       .filter((id): id is string => !!id);
 
-    await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
     if (permissionIds.length) {
       await prisma.rolePermission.createMany({
         data: permissionIds.map((permissionId) => ({
@@ -131,10 +130,4 @@ export async function ensureDefaultAccessRoles(prisma: PrismaService) {
       });
     }
   }
-
-  // Rol legado "Consulta" → desactivar (reemplazado por Matrimonios)
-  await prisma.accessRole.updateMany({
-    where: { name: 'Consulta' },
-    data: { active: false },
-  });
 }

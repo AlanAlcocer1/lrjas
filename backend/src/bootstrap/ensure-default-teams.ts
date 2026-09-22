@@ -10,12 +10,20 @@ const DEFAULT_TEAMS: { name: string; color: string }[] = [
   { name: 'Logística', color: '#14b8a6' },
 ];
 
+/**
+ * Solo siembra equipos la primera vez (tabla vacía).
+ * Si ya hay equipos, no recrea ni pisa los que el usuario borró/editó.
+ */
 export async function ensureDefaultTeams(prisma: PrismaService) {
-  for (const team of DEFAULT_TEAMS) {
-    await prisma.team.upsert({
-      where: { name: team.name },
-      create: { name: team.name, color: team.color, active: true },
-      update: { color: team.color },
-    });
-  }
+  const count = await prisma.team.count();
+  if (count > 0) return;
+
+  await prisma.team.createMany({
+    data: DEFAULT_TEAMS.map((team) => ({
+      name: team.name,
+      color: team.color,
+      active: true,
+    })),
+    skipDuplicates: true,
+  });
 }

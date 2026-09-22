@@ -3,15 +3,11 @@ import { ACTIVIDADES_PERMISSIONS } from '../modules/actividades/permissions.cata
 
 export async function ensureActividadesPermissions(prisma: PrismaService) {
   for (const p of ACTIVIDADES_PERMISSIONS) {
-    await prisma.permission.upsert({
-      where: { key: p.key },
-      create: {
+    const existing = await prisma.permission.findUnique({ where: { key: p.key } });
+    if (existing) continue;
+    await prisma.permission.create({
+      data: {
         key: p.key,
-        name: p.name,
-        description: p.description,
-        groupKey: p.groupKey,
-      },
-      update: {
         name: p.name,
         description: p.description,
         groupKey: p.groupKey,

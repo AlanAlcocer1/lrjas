@@ -543,11 +543,18 @@ export class ActivitiesService {
       activity.teamId,
       'Solo puedes eliminar actividades de tu equipo',
     );
-    await this.prisma.activityHistory.create({
+    // Auditoría ANTES del delete (activity_history tiene ON DELETE CASCADE)
+    await this.prisma.accessLog.create({
       data: {
-        activityId: id,
+        action: 'activity_deleted',
         participantId: actor.id,
-        action: 'deleted',
+        code: actor.code,
+        metadata: {
+          activityId: id,
+          name: activity.name,
+          date: activity.date,
+          teamId: activity.teamId,
+        },
       },
     });
     await this.prisma.activity.delete({ where: { id } });
@@ -1209,7 +1216,8 @@ export class ActivitiesService {
   }
 
   async dashboard(participantId: string) {
-    const today = new Date(new Date().toISOString().slice(0, 10));
+    const todayKey = todayKeyMexico();
+    const today = new Date(`${todayKey}T00:00:00.000Z`);
     const boardStatuses = [
       ACTIVITY_STATUS.AWAITING_APPROVAL,
       ACTIVITY_STATUS.CHANGES_REQUESTED,
@@ -1218,6 +1226,7 @@ export class ActivitiesService {
       ACTIVITY_STATUS.IN_PROGRESS,
       ACTIVITY_STATUS.INCOMPLETE,
     ];
+    const closedStatusNames = [...CLOSED_ACTIVITY_STATUSES];
     const [
       upcoming,
       pendingApproval,
@@ -1232,7 +1241,18 @@ export class ActivitiesService {
       boardStatusesRows,
     ] = await Promise.all([
       this.prisma.activity.findMany({
-        where: { date: { gte: today } },
+        where: {
+          status: { name: { notIn: closedStatusNames } },
+          OR: [
+            { date: { gte: today } },
+            { endDate: { gte: today } },
+            {
+              recurrenceType: { not: 'NONE' },
+              date: { lte: today },
+              OR: [{ recurrenceUntil: null }, { recurrenceUntil: { gte: today } }],
+            },
+          ],
+        },
         orderBy: { date: 'asc' },
         take: 8,
         include: {
@@ -1248,7 +1268,7 @@ export class ActivitiesService {
           assigneeId: participantId,
           completed: false,
           activity: {
-            status: { name: { notIn: [...CLOSED_ACTIVITY_STATUSES] } },
+            status: { name: { notIn: closedStatusNames } },
           },
         },
         take: 10,
@@ -1269,7 +1289,7 @@ export class ActivitiesService {
           completed: false,
           dueDate: { lt: today },
           activity: {
-            status: { name: { notIn: [...CLOSED_ACTIVITY_STATUSES] } },
+            status: { name: { notIn: closedStatusNames } },
           },
         },
       }),
@@ -1297,7 +1317,7 @@ export class ActivitiesService {
         where: {
           assigneeId: participantId,
           activity: {
-            status: { name: { notIn: [...CLOSED_ACTIVITY_STATUSES] } },
+            status: { name: { notIn: closedStatusNames } },
           },
           OR: [
             { completed: false },
