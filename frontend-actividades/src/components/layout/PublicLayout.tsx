@@ -5,11 +5,11 @@ export function PublicLayout() {
   return (
     <div className="min-h-dvh gradient-mesh flex flex-col">
       <header className="sticky top-0 z-20 glass px-4 py-3 flex items-center justify-between">
-        <Link to="/public" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <Logo variant="isotipo" className="h-8 w-8" />
           <div>
             <p className="text-sm font-semibold leading-tight">LRJAS Actividades</p>
-            <p className="text-[11px] text-muted-foreground">Ver actividades</p>
+            <p className="text-[11px] text-muted-foreground">Calendario del comité</p>
           </div>
         </Link>
       </header>

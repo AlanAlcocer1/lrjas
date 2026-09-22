@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { AuthProvider } from '@/hooks/useAuth';
 import { AppShell } from '@/components/layout/AppShell';
 import { PublicLayout } from '@/components/layout/PublicLayout';
@@ -18,20 +18,31 @@ import { AuditPage } from '@/pages/AuditPage';
 import { PublicAgendaPage } from '@/pages/PublicAgendaPage';
 import { PublicDetailPage } from '@/pages/PublicDetailPage';
 
+function LegacyPublicDetailRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={id ? `/evento/${id}` : '/'} replace />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route element={<GuestRoute />}>
-          <Route path="/login" element={<LoginPage />} />
-        </Route>
-
+        {/* Agenda pública = home del subdominio */}
         <Route element={<PublicLayout />}>
-          <Route path="/public" element={<PublicAgendaPage />} />
-          <Route path="/public/:id" element={<PublicDetailPage />} />
+          <Route index element={<PublicAgendaPage />} />
+          <Route path="evento/:id" element={<PublicDetailPage />} />
         </Route>
 
-        <Route element={<ProtectedRoute />}>
+        {/* Compatibilidad con links viejos /public */}
+        <Route path="public" element={<Navigate to="/" replace />} />
+        <Route path="public/:id" element={<LegacyPublicDetailRedirect />} />
+
+        <Route element={<GuestRoute />}>
+          <Route path="login" element={<LoginPage />} />
+        </Route>
+
+        {/* Panel del comité */}
+        <Route path="app" element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
             <Route index element={<DashboardPage />} />
             <Route path="actividades" element={<ActivitiesPage />} />

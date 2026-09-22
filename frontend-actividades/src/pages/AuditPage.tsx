@@ -46,7 +46,7 @@ export function AuditPage() {
   }, [hasPermission]);
 
   if (!hasPermission('audit.view')) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/app" replace />;
   }
 
   if (loading) {
@@ -128,7 +128,7 @@ export function AuditPage() {
                   </div>
                   {row.activity && (
                     <Link
-                      to={`/actividades/${row.activity.id}`}
+                      to={`/app/actividades/${row.activity.id}`}
                       className="text-sm text-leaf-dark hover:underline"
                     >
                       {row.activity.name}

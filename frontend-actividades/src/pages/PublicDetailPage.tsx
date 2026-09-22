@@ -40,7 +40,7 @@ export function PublicDetailPage() {
         description="Esta actividad no es pública o no existe."
         action={
           <Button asChild variant="outline">
-            <Link to="/public">Volver a la agenda</Link>
+            <Link to="/">Volver a la agenda</Link>
           </Button>
         }
       />
@@ -52,7 +52,7 @@ export function PublicDetailPage() {
   return (
     <div className="space-y-5">
       <Button variant="ghost" size="sm" asChild>
-        <Link to="/public">
+        <Link to="/">
           <ArrowLeft className="h-4 w-4" />
           Agenda
         </Link>

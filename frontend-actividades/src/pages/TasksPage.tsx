@@ -76,7 +76,7 @@ export function TasksPage() {
                     <p className="font-medium">{task.name}</p>
                     {task.activity && (
                       <Link
-                        to={`/actividades/${task.activity.id}`}
+                        to={`/app/actividades/${task.activity.id}`}
                         className="text-xs text-leaf-dark hover:underline"
                       >
                         {task.activity.name}

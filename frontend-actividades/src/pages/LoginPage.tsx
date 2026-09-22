@@ -27,7 +27,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [deniedOpen, setDeniedOpen] = useState(false);
   const [deniedMessage, setDeniedMessage] = useState(ACCESS_DENIED_MSG);
-  const from = (location.state as { from?: string } | null)?.from || '/';
+  const from = (location.state as { from?: string } | null)?.from || '/app';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +94,7 @@ export function LoginPage() {
         </form>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          <Link to="/public" className="text-leaf-dark hover:underline">
+          <Link to="/" className="text-leaf-dark hover:underline">
             Ver actividades
           </Link>
         </p>
@@ -119,7 +119,7 @@ export function LoginPage() {
               Entendido
             </Button>
             <Button variant="outline" className="w-full" asChild>
-              <Link to="/public" onClick={() => setDeniedOpen(false)}>
+              <Link to="/" onClick={() => setDeniedOpen(false)}>
                 Ver actividades
               </Link>
             </Button>

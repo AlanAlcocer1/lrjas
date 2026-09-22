@@ -157,7 +157,7 @@ function ActivityKanbanCard({ activity }: { activity: Activity }) {
   const progress = activity.progress;
   return (
     <Link
-      to={`/actividades/${activity.id}`}
+      to={`/app/actividades/${activity.id}`}
       className={cn(
         'block rounded-xl border border-border bg-card p-3 space-y-2',
         'hover:border-leaf/40 hover:shadow-sm transition-all active:scale-[0.99]',
@@ -219,7 +219,7 @@ function TaskKanbanCard({ task }: { task: ActivityTask }) {
 
   return (
     <Link
-      to={task.activity?.id ? `/actividades/${task.activity.id}` : '/tareas'}
+      to={task.activity?.id ? `/app/actividades/${task.activity.id}` : '/app/tareas'}
       className={cn(
         'block rounded-xl border border-border bg-card p-3 space-y-2',
         'hover:border-leaf/40 hover:shadow-sm transition-all active:scale-[0.99]',

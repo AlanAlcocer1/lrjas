@@ -31,18 +31,18 @@ type NavItem = {
 };
 
 const primaryNav: NavItem[] = [
-  { to: '/', label: 'Inicio', icon: Home, permission: 'activities.view' },
-  { to: '/calendario', label: 'Calendario', icon: CalendarDays, permission: 'calendar.view' },
-  { to: '/tareas', label: 'Tareas', icon: CheckSquare, permission: 'tasks.view' },
+  { to: '/app', label: 'Inicio', icon: Home, permission: 'activities.view' },
+  { to: '/app/calendario', label: 'Calendario', icon: CalendarDays, permission: 'calendar.view' },
+  { to: '/app/tareas', label: 'Tareas', icon: CheckSquare, permission: 'tasks.view' },
 ];
 
 const moreNav: NavItem[] = [
-  { to: '/actividades', label: 'Actividades', icon: ClipboardList, permission: 'activities.view' },
-  { to: '/aprobaciones', label: 'Aprobaciones', icon: ShieldCheck, anyOf: ['approvals.view', 'activities.approve'] },
-  { to: '/equipos', label: 'Equipos', icon: UsersRound, permission: 'teams.view' },
-  { to: '/usuarios', label: 'Usuarios', icon: Users, permission: 'users.view' },
-  { to: '/historial', label: 'Historial', icon: History, permission: 'audit.view' },
-  { to: '/configuracion', label: 'Configuración', icon: Settings, anyOf: ['roles.view', 'settings.manage'] },
+  { to: '/app/actividades', label: 'Actividades', icon: ClipboardList, permission: 'activities.view' },
+  { to: '/app/aprobaciones', label: 'Aprobaciones', icon: ShieldCheck, anyOf: ['approvals.view', 'activities.approve'] },
+  { to: '/app/equipos', label: 'Equipos', icon: UsersRound, permission: 'teams.view' },
+  { to: '/app/usuarios', label: 'Usuarios', icon: Users, permission: 'users.view' },
+  { to: '/app/historial', label: 'Historial', icon: History, permission: 'audit.view' },
+  { to: '/app/configuracion', label: 'Configuración', icon: Settings, anyOf: ['roles.view', 'settings.manage'] },
 ];
 
 function useFilteredNav(items: NavItem[]) {
@@ -86,7 +86,7 @@ export function AppShell() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
+              end={item.to === '/app'}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
@@ -141,7 +141,7 @@ export function AppShell() {
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.to === '/'}
+                end={item.to === '/app'}
                 className={({ isActive }) =>
                   cn(
                     'flex flex-col items-center gap-0.5 rounded-xl py-2 text-[11px] font-medium',
@@ -168,7 +168,7 @@ export function AppShell() {
         {canCreate && (
           <button
             type="button"
-            onClick={() => navigate('/actividades/nueva')}
+            onClick={() => navigate('/app/actividades/nueva')}
             className="md:hidden fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-leaf/30 flex items-center justify-center active:scale-95"
             aria-label="Nueva actividad"
           >
@@ -178,7 +178,7 @@ export function AppShell() {
 
         {canCreate && (
           <div className="hidden md:block fixed bottom-8 right-8 z-40">
-            <Button size="lg" onClick={() => navigate('/actividades/nueva')} className="shadow-lg">
+            <Button size="lg" onClick={() => navigate('/app/actividades/nueva')} className="shadow-lg">
               <Plus className="h-5 w-5" />
               Nueva actividad
             </Button>

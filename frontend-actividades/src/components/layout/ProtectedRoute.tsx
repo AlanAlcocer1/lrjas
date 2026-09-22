@@ -23,7 +23,7 @@ export function ProtectedRoute({ permission }: { permission?: string }) {
   }
 
   if (permission && !hasPermission(permission)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/app" replace />;
   }
 
   return <Outlet />;
@@ -32,6 +32,6 @@ export function ProtectedRoute({ permission }: { permission?: string }) {
 export function GuestRoute() {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return null;
-  if (isAuthenticated) return <Navigate to="/" replace />;
+  if (isAuthenticated) return <Navigate to="/app" replace />;
   return <Outlet />;
 }

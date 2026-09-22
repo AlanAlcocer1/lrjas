@@ -59,7 +59,7 @@ export function ActivitiesPage() {
         </div>
         {hasPermission('activities.create') && (
           <Button asChild className="shrink-0">
-            <Link to="/actividades/nueva">
+            <Link to="/app/actividades/nueva">
               <Plus className="h-4 w-4" />
               Nueva
             </Link>
@@ -124,7 +124,7 @@ export function ActivitiesPage() {
           action={
             hasPermission('activities.create') ? (
               <Button asChild>
-                <Link to="/actividades/nueva">Crear la primera</Link>
+                <Link to="/app/actividades/nueva">Crear la primera</Link>
               </Button>
             ) : undefined
           }

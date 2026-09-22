@@ -26,7 +26,7 @@ export function ActivityCard({ activity }: { activity: Activity }) {
         : null;
 
   return (
-    <Link to={`/actividades/${activity.id}`} className="block min-w-0">
+    <Link to={`/app/actividades/${activity.id}`} className="block min-w-0">
       <Card className="transition-all hover:border-leaf/40 hover:shadow-md active:scale-[0.99] overflow-hidden">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-start gap-3">
@@ -123,7 +123,7 @@ export function PublicActivityCard({ activity }: { activity: PublicActivity }) {
         : null;
 
   return (
-    <Link to={`/public/${activity.id}`} className="block min-w-0">
+    <Link to={`/evento/${activity.id}`} className="block min-w-0">
       <Card className="transition-all hover:border-leaf/40 hover:shadow-md active:scale-[0.99] overflow-hidden">
         <CardContent className="p-4 space-y-3">
           <h3 className="font-semibold text-foreground leading-snug break-words">{activity.name}</h3>

@@ -110,7 +110,7 @@ export function ActivityDetailPage() {
       }
     } catch (err) {
       toast.error(getErrorMessage(err));
-      navigate('/actividades');
+      navigate('/app/actividades');
     } finally {
       setLoading(false);
     }
@@ -204,7 +204,7 @@ export function ActivityDetailPage() {
     try {
       await activitiesApi.remove(id);
       toast.success('Actividad eliminada');
-      navigate('/actividades');
+      navigate('/app/actividades');
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
@@ -371,7 +371,7 @@ export function ActivityDetailPage() {
     <div className="space-y-5">
       <div>
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/actividades">
+          <Link to="/app/actividades">
             <ArrowLeft className="h-4 w-4" />
             Actividades
           </Link>

@@ -78,7 +78,7 @@ export function NewActivityPage() {
 
   useEffect(() => {
     if (!hasPermission('activities.create')) {
-      navigate('/');
+      navigate('/app');
       return;
     }
     let cancelled = false;
@@ -188,7 +188,7 @@ export function NewActivityPage() {
       };
       const created = await activitiesApi.create(payload);
       toast.success('Actividad creada');
-      navigate(`/actividades/${created.id}`);
+      navigate(`/app/actividades/${created.id}`);
     } catch (err) {
       toast.error(getErrorMessage(err, 'No se pudo crear'));
     } finally {

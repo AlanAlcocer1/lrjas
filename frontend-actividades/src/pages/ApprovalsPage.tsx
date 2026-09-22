@@ -98,7 +98,7 @@ export function ApprovalsPage() {
               <Card>
                 <CardContent className="p-3 flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" asChild>
-                    <Link to={`/actividades/${a.id}`}>Ver detalle</Link>
+                    <Link to={`/app/actividades/${a.id}`}>Ver detalle</Link>
                   </Button>
                   {hasPermission('activities.approve') && (
                     <Button size="sm" onClick={() => openAction(a, 'approve')}>

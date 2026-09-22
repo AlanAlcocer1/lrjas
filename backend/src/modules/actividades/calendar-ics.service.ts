@@ -91,7 +91,7 @@ export class CalendarIcsService {
         recurrenceInterval: a.recurrenceInterval,
         recurrenceWeekdays: a.recurrenceWeekdays,
         recurrenceUntil: a.recurrenceUntil,
-        url: `${baseUrl}/public/${a.id}`,
+        url: `${baseUrl}/evento/${a.id}`,
       }),
     );
 
@@ -117,7 +117,7 @@ export class CalendarIcsService {
       recurrenceInterval: a.recurrenceInterval,
       recurrenceWeekdays: a.recurrenceWeekdays,
       recurrenceUntil: a.recurrenceUntil,
-      url: `${baseUrl}/public/${a.id}`,
+      url: `${baseUrl}/evento/${a.id}`,
     });
 
     return this.wrapCalendar(a.name, [event]);

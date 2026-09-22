@@ -361,7 +361,7 @@ export function ActivitiesCalendar({
                       const color = cancelled
                         ? CANCELLED_COLOR
                         : a.team?.color || FALLBACK_COLOR;
-                      const href = mode === 'public' ? `/public/${a.id}` : `/actividades/${a.id}`;
+                      const href = mode === 'public' ? `/evento/${a.id}` : `/app/actividades/${a.id}`;
                       const timeLabel = a.endTime
                         ? `${a.startTime} – ${a.endTime}`
                         : a.startTime;
@@ -458,8 +458,8 @@ export function ActivitiesCalendar({
                     {dayTasks.map((t) => {
                       const color = t.activity?.team?.color || TASK_FALLBACK;
                       const href = t.activity?.id
-                        ? `/actividades/${t.activity.id}`
-                        : '/tareas';
+                        ? `/app/actividades/${t.activity.id}`
+                        : '/app/tareas';
 
                       return (
                         <Link

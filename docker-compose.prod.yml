@@ -48,6 +48,7 @@ services:
       args:
         VITE_API_URL: /api
         VITE_BASE_PATH: /
+        VITE_ACTIVIDADES_URL: ${ACTIVIDADES_PUBLIC_URL:-https://actividades.lrjasmerida.me}
     container_name: lrjas-web
     restart: unless-stopped
     ports:
@@ -66,8 +67,8 @@ services:
         VITE_BASE_PATH: /
     container_name: lrjas-web-actividades
     restart: unless-stopped
-    expose:
-      - '80'
+    ports:
+      - '${ACTIVIDADES_HTTP_PORT:-8081}:80'
     depends_on:
       - backend
     networks:

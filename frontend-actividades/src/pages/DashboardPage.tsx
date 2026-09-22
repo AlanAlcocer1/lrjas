@@ -129,7 +129,7 @@ export function DashboardPage() {
           icon={Calendar}
           label="Próximas"
           value={data.upcoming.length}
-          to="/actividades"
+          to="/app/actividades"
         />
         <StatCard
           icon={ClipboardCheck}
@@ -137,7 +137,7 @@ export function DashboardPage() {
           value={data.counts.pendingApproval}
           to={
             hasPermission('approvals.view') || hasPermission('activities.approve')
-              ? '/aprobaciones'
+              ? '/app/aprobaciones'
               : undefined
           }
           highlight={data.counts.pendingApproval > 0}
@@ -146,13 +146,13 @@ export function DashboardPage() {
           icon={CheckSquare}
           label="Mis tareas"
           value={data.myTasks.length}
-          to="/tareas"
+          to="/app/tareas"
         />
         <StatCard
           icon={AlertCircle}
           label="Vencidas"
           value={data.counts.overdueTasks}
-          to="/tareas"
+          to="/app/tareas"
           highlight={data.counts.overdueTasks > 0}
         />
       </div>
@@ -173,7 +173,7 @@ export function DashboardPage() {
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">Próximas actividades</h2>
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/actividades">Ver todas</Link>
+                <Link to="/app/actividades">Ver todas</Link>
               </Button>
             </div>
             {data.upcoming.length === 0 ? (
@@ -184,7 +184,7 @@ export function DashboardPage() {
                 action={
                   hasPermission('activities.create') ? (
                     <Button asChild>
-                      <Link to="/actividades/nueva">Crear actividad</Link>
+                      <Link to="/app/actividades/nueva">Crear actividad</Link>
                     </Button>
                   ) : undefined
                 }
@@ -202,7 +202,7 @@ export function DashboardPage() {
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">Mis tareas</h2>
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/tareas">Ver todas</Link>
+                <Link to="/app/tareas">Ver todas</Link>
               </Button>
             </div>
             {data.myTasks.length === 0 ? (
@@ -214,7 +214,7 @@ export function DashboardPage() {
             ) : (
               <div className="grid gap-2">
                 {data.myTasks.slice(0, 5).map((task) => (
-                  <Link key={task.id} to={`/actividades/${task.activity?.id}`}>
+                  <Link key={task.id} to={`/app/actividades/${task.activity?.id}`}>
                     <Card className="hover:border-leaf/40 transition-colors">
                       <CardContent className="p-3 flex items-center justify-between gap-3">
                         <div className="min-w-0">
