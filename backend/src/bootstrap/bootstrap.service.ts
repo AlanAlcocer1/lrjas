@@ -6,6 +6,11 @@ import { ensureOtroStake } from './ensure-otro-stake';
 import { ensureMiembroField, backfillMiembroFromStakes } from './ensure-miembro-field';
 import { ensureSocialPostsTable } from './ensure-social-posts';
 import { ensureGeneralEvent } from './ensure-general-event';
+import { ensureActividadesPermissions } from './ensure-actividades-permissions';
+import { ensureActivityStatuses } from './ensure-activity-statuses';
+import { ensureDefaultTeams } from './ensure-default-teams';
+import { ensureDefaultAccessRoles } from './ensure-default-access-roles';
+import { ensureActividadesBootstrapAdmins } from './ensure-actividades-bootstrap-admins';
 
 @Injectable()
 export class BootstrapService implements OnModuleInit {
@@ -19,5 +24,10 @@ export class BootstrapService implements OnModuleInit {
     await ensureSocialPostsTable(this.prisma);
     await ensureGeneralEvent(this.prisma);
     await ensureMasterUser(this.prisma);
+    await ensureActividadesPermissions(this.prisma);
+    await ensureActivityStatuses(this.prisma);
+    await ensureDefaultTeams(this.prisma);
+    await ensureDefaultAccessRoles(this.prisma);
+    await ensureActividadesBootstrapAdmins(this.prisma);
   }
 }
