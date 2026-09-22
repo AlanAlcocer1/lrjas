@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ApprovalStatus, RecurrenceType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ACTIVITY_STATUS } from './activity-status.catalog';
 
 function pad(n: number) {
   return String(n).padStart(2, '0');
@@ -58,7 +59,20 @@ export class CalendarIcsService {
 
   async publicFeed(baseUrl: string) {
     const activities = await this.prisma.activity.findMany({
-      where: { approvalStatus: ApprovalStatus.APPROVED },
+      where: {
+        approvalStatus: ApprovalStatus.APPROVED,
+        status: {
+          name: {
+            notIn: [
+              ACTIVITY_STATUS.CANCELLED,
+              ACTIVITY_STATUS.REJECTED,
+              ACTIVITY_STATUS.AWAITING_APPROVAL,
+              ACTIVITY_STATUS.CHANGES_REQUESTED,
+              ACTIVITY_STATUS.POSTPONED,
+            ],
+          },
+        },
+      },
       orderBy: { date: 'asc' },
       include: { team: { select: { name: true } } },
     });
@@ -77,7 +91,7 @@ export class CalendarIcsService {
         recurrenceInterval: a.recurrenceInterval,
         recurrenceWeekdays: a.recurrenceWeekdays,
         recurrenceUntil: a.recurrenceUntil,
-        url: `${baseUrl}/public/actividades/${a.id}`,
+        url: `${baseUrl}/public/${a.id}`,
       }),
     );
 
@@ -103,7 +117,7 @@ export class CalendarIcsService {
       recurrenceInterval: a.recurrenceInterval,
       recurrenceWeekdays: a.recurrenceWeekdays,
       recurrenceUntil: a.recurrenceUntil,
-      url: `${baseUrl}/public/actividades/${a.id}`,
+      url: `${baseUrl}/public/${a.id}`,
     });
 
     return this.wrapCalendar(a.name, [event]);

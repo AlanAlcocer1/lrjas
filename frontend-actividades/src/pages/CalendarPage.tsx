@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { activitiesApi } from '@/services/api';
 import type { Activity, ActivityTask } from '@/types';
 import { ActivitiesCalendar } from '@/components/calendar/ActivitiesCalendar';
+import { CalendarSubscribeButton } from '@/components/calendar/CalendarSubscribeButton';
 import { Skeleton } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/lib/utils';
@@ -39,11 +40,14 @@ export function CalendarPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Calendario</h1>
-        <p className="text-sm text-muted-foreground">
-          Actividades y tareas · toca un día para ver el detalle
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Calendario</h1>
+          <p className="text-sm text-muted-foreground">
+            Actividades y tareas · toca un día para ver el detalle
+          </p>
+        </div>
+        <CalendarSubscribeButton />
       </div>
 
       {loading && items.length === 0 && !range ? (
