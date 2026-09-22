@@ -34,8 +34,8 @@ export default function HomePage() {
               </motion.div>
               <p className="text-muted-foreground text-sm sm:text-base max-w-md mx-auto leading-relaxed">
                 {APP_DESCRIPTION}. Regístrate una vez y accede a todas las actividades con tu código
-                personal. También puedes consultar el calendario de actividades del comité desde el
-                botón de abajo.
+                personal. También puedes consultar el calendario de actividades desde el botón de
+                abajo.
               </p>
             </div>
           </FadeIn>

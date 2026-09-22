@@ -22,13 +22,14 @@ certbot certonly --standalone --expand \
 
 mkdir -p deploy/nginx
 
+# Usar container_name (no service name) para no cruzar frontends
 cat > deploy/nginx/proxy.conf <<EOF
 upstream lrjas_asistencias {
-    server web:80;
+    server lrjas-web:80;
 }
 
 upstream lrjas_actividades {
-    server web-actividades:80;
+    server lrjas-web-actividades:80;
 }
 
 server {
@@ -37,8 +38,9 @@ server {
     return 301 https://\$host\$request_uri;
 }
 
+# Asistencias (dominio principal) — default_server evita rutas cruzadas
 server {
-    listen 443 ssl http2;
+    listen 443 ssl http2 default_server;
     server_name ${DOMAIN} www.${DOMAIN};
 
     ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
@@ -51,9 +53,11 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-LRJAS-Route asistencias;
     }
 }
 
+# Actividades (subdominio)
 server {
     listen 443 ssl http2;
     server_name ${ACTIVIDADES_HOST};
@@ -68,6 +72,7 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-LRJAS-Route actividades;
     }
 }
 EOF
@@ -93,9 +98,9 @@ EOF
 
 # Evitar choque de puertos: webs internas, proxy en 80/443
 if grep -q '^HTTP_PORT=' .env 2>/dev/null; then
-  sed -i 's/^HTTP_PORT=.*/HTTP_PORT=8080/' .env
+  sed -i 's/^HTTP_PORT=.*/HTTP_PORT=18080/' .env
 else
-  echo 'HTTP_PORT=8080' >> .env
+  echo 'HTTP_PORT=18080' >> .env
 fi
 if grep -q '^ACTIVIDADES_HTTP_PORT=' .env 2>/dev/null; then
   sed -i 's/^ACTIVIDADES_HTTP_PORT=.*/ACTIVIDADES_HTTP_PORT=8081/' .env
@@ -110,3 +115,7 @@ echo "  Asistencias: https://${DOMAIN}"
 echo "  Actividades: https://${ACTIVIDADES_HOST}"
 echo "  Panel comité: https://${ACTIVIDADES_HOST}/login  (luego /app)"
 echo "Renovación: certbot renew"
+echo ""
+echo "Verificar routing:"
+echo "  curl -sI https://${DOMAIN} | grep -i x-lrjas"
+echo "  curl -sI https://${ACTIVIDADES_HOST} | grep -i x-lrjas"

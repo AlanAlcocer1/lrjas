@@ -9,7 +9,7 @@ export function PublicLayout() {
           <Logo variant="isotipo" className="h-8 w-8" />
           <div>
             <p className="text-sm font-semibold leading-tight">LRJAS Actividades</p>
-            <p className="text-[11px] text-muted-foreground">Calendario del comité</p>
+            <p className="text-[11px] text-muted-foreground">Calendario de actividades</p>
           </div>
         </Link>
       </header>
