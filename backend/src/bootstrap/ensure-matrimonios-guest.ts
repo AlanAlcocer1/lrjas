@@ -55,6 +55,14 @@ export async function ensureMatrimoniosGuest(prisma: PrismaService) {
 
   if (!participantId) return;
 
+  // Solo lectura: quita cualquier otro rol (p. ej. Administrador mal asignado)
+  await prisma.participantAccessRole.deleteMany({
+    where: {
+      participantId,
+      roleId: { not: role.id },
+    },
+  });
+
   await prisma.participantAccessRole.upsert({
     where: {
       participantId_roleId: {

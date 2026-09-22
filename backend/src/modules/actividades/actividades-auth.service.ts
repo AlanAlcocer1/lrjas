@@ -5,6 +5,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CodeLoginDto } from './dto/code-login.dto';
 import { ActividadesUser } from './guards/permissions.guard';
 import { MATRIMONIOS_ACCESS_CODE, ensureMatrimoniosGuest } from '../../bootstrap/ensure-matrimonios-guest';
+import {
+  DEFAULT_ACTIVIDADES_ADMIN_CODE,
+  ensureActividadesBootstrapAdmins,
+} from '../../bootstrap/ensure-actividades-bootstrap-admins';
 
 function displayName(p: {
   firstName: string;
@@ -36,6 +40,11 @@ export class ActividadesAuthService {
     // Asegura guest + rol Matrimonios aunque el bootstrap no haya corrido
     if (code === MATRIMONIOS_ACCESS_CODE) {
       await ensureMatrimoniosGuest(this.prisma);
+    }
+
+    // Primer admin: 000 siempre recibe Administrador si existe en el padrón
+    if (code === DEFAULT_ACTIVIDADES_ADMIN_CODE) {
+      await ensureActividadesBootstrapAdmins(this.prisma);
     }
 
     const participant = await this.prisma.participant.findUnique({

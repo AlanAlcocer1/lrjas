@@ -16,7 +16,7 @@ apt-get install -y certbot
 
 docker compose -f docker-compose.prod.yml stop web web-actividades || true
 
-certbot certonly --standalone \
+certbot certonly --standalone --expand \
   -d "$DOMAIN" -d "www.${DOMAIN}" -d "$ACTIVIDADES_HOST" \
   --email "$EMAIL" --agree-tos --non-interactive
 

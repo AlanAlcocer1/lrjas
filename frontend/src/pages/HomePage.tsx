@@ -88,7 +88,7 @@ export default function HomePage() {
                   <div className="min-w-0 flex-1">
                     <h2 className="font-semibold mb-0.5">Calendario de actividades</h2>
                     <p className="text-xs text-muted-foreground">
-                      Mira las próximas actividades del comité (fechas, horarios y lugar)
+                      Mira las próximas actividades que tenemos para ti
                     </p>
                   </div>
                   <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-leaf-dark group-hover:translate-x-1 transition-all" />

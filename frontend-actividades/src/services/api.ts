@@ -25,6 +25,16 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+/** Absolute URL for ICS links (Google/Apple need full https://...). */
+function absoluteApiPath(path: string) {
+  const joined = `${API_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
+  if (/^https?:\/\//i.test(joined)) return joined;
+  if (typeof window !== 'undefined') {
+    return new URL(joined, window.location.origin).href;
+  }
+  return joined;
+}
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -111,9 +121,10 @@ export const activitiesApi = {
       .then((r) => r.data),
   getPublic: (id: string) =>
     api.get<PublicActivity>(`/actividades/public/activities/${id}`).then((r) => r.data),
-  eventIcsUrl: (id: string) => `${API_URL}/actividades/public/activities/${id}/event.ics`,
+  eventIcsUrl: (id: string) =>
+    absoluteApiPath(`/actividades/public/activities/${id}/event.ics`),
   /** Feed ICS suscribible (Google / Apple / Outlook). */
-  publicCalendarIcsUrl: () => `${API_URL}/actividades/calendar/public.ics`,
+  publicCalendarIcsUrl: () => absoluteApiPath('/actividades/calendar/public.ics'),
 };
 
 export const teamsApi = {
