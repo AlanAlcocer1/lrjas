@@ -131,7 +131,21 @@ export class CalendarIcsService {
 
   async singleEventIcs(id: string, baseUrl: string) {
     const a = await this.prisma.activity.findFirst({
-      where: { id, approvalStatus: ApprovalStatus.APPROVED },
+      where: {
+        id,
+        approvalStatus: ApprovalStatus.APPROVED,
+        status: {
+          name: {
+            notIn: [
+              ACTIVITY_STATUS.CANCELLED,
+              ACTIVITY_STATUS.REJECTED,
+              ACTIVITY_STATUS.AWAITING_APPROVAL,
+              ACTIVITY_STATUS.CHANGES_REQUESTED,
+              ACTIVITY_STATUS.POSTPONED,
+            ],
+          },
+        },
+      },
     });
     if (!a) return null;
 
@@ -189,11 +203,13 @@ export class CalendarIcsService {
       lines.push(`DTSTART;VALUE=DATE:${toIcsDate(input.date)}`);
       lines.push(`DTEND;VALUE=DATE:${toIcsDate(addDaysUtc(input.endDate!, 1))}`);
     } else {
-      const dtStart = toIcsUtcDateTime(input.date, input.startTime);
-      const dtEnd = toIcsUtcDateTime(
+      const end = this.resolveEndDateTime(
         input.date,
-        input.endTime || this.addHour(input.startTime),
+        input.startTime,
+        input.endTime,
       );
+      const dtStart = toIcsUtcDateTime(input.date, input.startTime);
+      const dtEnd = toIcsUtcDateTime(end.date, end.time);
       lines.push(`DTSTART:${dtStart}`);
       lines.push(`DTEND:${dtEnd}`);
     }
@@ -260,9 +276,24 @@ export class CalendarIcsService {
     return lines.join('\r\n') + '\r\n';
   }
 
-  private addHour(time: string) {
-    const [h, m] = time.split(':').map(Number);
-    const next = ((h || 0) + 1) % 24;
-    return `${String(next).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`;
+  /** Si no hay endTime, +1h; si cruza medianoche, pasa al día siguiente. */
+  private resolveEndDateTime(
+    date: Date,
+    startTime: string,
+    endTime: string | null,
+  ): { date: Date; time: string } {
+    if (endTime) return { date, time: endTime };
+    const [h, m] = startTime.split(':').map(Number);
+    const nextH = (h || 0) + 1;
+    if (nextH < 24) {
+      return {
+        date,
+        time: `${String(nextH).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`,
+      };
+    }
+    return {
+      date: addDaysUtc(date, 1),
+      time: `00:${String(m || 0).padStart(2, '0')}`,
+    };
   }
 }

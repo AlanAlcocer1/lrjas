@@ -207,7 +207,21 @@ export class ActivitiesService {
 
   async findPublicOne(id: string) {
     const activity = await this.prisma.activity.findFirst({
-      where: { id, approvalStatus: ApprovalStatus.APPROVED },
+      where: {
+        id,
+        approvalStatus: ApprovalStatus.APPROVED,
+        status: {
+          name: {
+            notIn: [
+              ACTIVITY_STATUS.CANCELLED,
+              ACTIVITY_STATUS.REJECTED,
+              ACTIVITY_STATUS.AWAITING_APPROVAL,
+              ACTIVITY_STATUS.CHANGES_REQUESTED,
+              ACTIVITY_STATUS.POSTPONED,
+            ],
+          },
+        },
+      },
       select: {
         id: true,
         name: true,
@@ -382,14 +396,17 @@ export class ActivitiesService {
             type: ResponsibleType.PRIMARY,
           },
         });
-        for (const participantId of dto.secondaryResponsibleIds ?? []) {
-          if (participantId === primaryId) continue;
-          await tx.activityResponsible.create({
-            data: {
+        const secondaries = (dto.secondaryResponsibleIds ?? []).filter(
+          (participantId) => participantId !== primaryId,
+        );
+        if (secondaries.length) {
+          await tx.activityResponsible.createMany({
+            data: secondaries.map((participantId) => ({
               activityId: id,
               participantId,
               type: ResponsibleType.SECONDARY,
-            },
+            })),
+            skipDuplicates: true,
           });
         }
       }
@@ -772,21 +789,24 @@ export class ActivitiesService {
         select: { id: true, name: true, dueDate: true },
       });
 
-      for (const task of tasksBefore) {
-        let nextDue: Date | null | undefined;
-        if (taskUpdates.has(task.id)) {
-          const raw = taskUpdates.get(task.id);
-          nextDue = raw ? new Date(raw) : null;
-        } else if (task.dueDate && dayDelta !== 0) {
-          nextDue = new Date(task.dueDate.getTime() + dayDelta * 86400000);
-        } else {
-          continue;
-        }
-        await tx.activityTask.update({
-          where: { id: task.id },
-          data: { dueDate: nextDue },
-        });
-      }
+      const taskOps = tasksBefore
+        .map((task) => {
+          let nextDue: Date | null | undefined;
+          if (taskUpdates.has(task.id)) {
+            const raw = taskUpdates.get(task.id);
+            nextDue = raw ? new Date(raw) : null;
+          } else if (task.dueDate && dayDelta !== 0) {
+            nextDue = new Date(task.dueDate.getTime() + dayDelta * 86400000);
+          } else {
+            return null;
+          }
+          return tx.activityTask.update({
+            where: { id: task.id },
+            data: { dueDate: nextDue },
+          });
+        })
+        .filter((op): op is ReturnType<typeof tx.activityTask.update> => !!op);
+      if (taskOps.length) await Promise.all(taskOps);
 
       await tx.approvalRequest.create({
         data: {

@@ -194,6 +194,7 @@ export function ActivityDetailPage() {
       );
     } catch (err) {
       toast.error(getErrorMessage(err));
+      throw err;
     } finally {
       setStatusSaving(false);
     }
