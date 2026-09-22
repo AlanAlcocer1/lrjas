@@ -111,10 +111,6 @@ export function CalendarSubscribeButton({
                   <strong className="font-medium text-foreground">iPhone:</strong> Ajustes →
                   Calendario → Cuentas → Añadir → Otra → Calendario con suscripción.
                 </li>
-                <li>
-                  En local (`localhost`) la suscripción suele fallar; en producción con HTTPS
-                  funciona bien.
-                </li>
               </ul>
             </div>
           </div>
