@@ -22,8 +22,9 @@ certbot certonly --standalone --expand \
 
 mkdir -p deploy/nginx
 
-# Usar container_name (no service name) para no cruzar frontends
+# Usar SOLO container_name (nunca el alias corto "web": choca con eca360)
 cat > deploy/nginx/proxy.conf <<EOF
+# asistencias = lrjas-web | actividades = lrjas-web-actividades
 upstream lrjas_asistencias {
     server lrjas-web:80;
 }
@@ -38,7 +39,7 @@ server {
     return 301 https://\$host\$request_uri;
 }
 
-# Asistencias (dominio principal) — default_server evita rutas cruzadas
+# DOMINIO PRINCIPAL = asistencias
 server {
     listen 443 ssl http2 default_server;
     server_name ${DOMAIN} www.${DOMAIN};
@@ -53,11 +54,10 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_set_header X-LRJAS-Route asistencias;
     }
 }
 
-# Actividades (subdominio)
+# SUBDOMINIO = actividades
 server {
     listen 443 ssl http2;
     server_name ${ACTIVIDADES_HOST};
@@ -72,7 +72,6 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_set_header X-LRJAS-Route actividades;
     }
 }
 EOF
