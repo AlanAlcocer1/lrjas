@@ -22,6 +22,7 @@ import {
   CreateActivityDto,
   CreateActivityStatusDto,
   CreateTaskDto,
+  PostponeActivityDto,
   UpdateActivityDto,
   UpdateActivityStatusDto,
   UpdateTaskDto,
@@ -30,6 +31,7 @@ import {
   ActividadesUser,
   ParticipantJwtAuthGuard,
   PermissionsGuard,
+  RequireAnyPermissions,
   RequirePermissions,
 } from './guards/permissions.guard';
 
@@ -106,7 +108,7 @@ export class ActivitiesController {
     @Body() dto: CreateActivityDto,
     @Req() req: { user: ActividadesUser },
   ) {
-    return this.activitiesService.create(dto, req.user.id);
+    return this.activitiesService.create(dto, req.user);
   }
 
   @Patch('activities/:id')
@@ -117,14 +119,14 @@ export class ActivitiesController {
     @Body() dto: UpdateActivityDto,
     @Req() req: { user: ActividadesUser },
   ) {
-    return this.activitiesService.update(id, dto, req.user.id);
+    return this.activitiesService.update(id, dto, req.user);
   }
 
   @Delete('activities/:id')
   @UseGuards(ParticipantJwtAuthGuard, PermissionsGuard)
   @RequirePermissions('activities.delete')
   remove(@Param('id') id: string, @Req() req: { user: ActividadesUser }) {
-    return this.activitiesService.remove(id, req.user.id);
+    return this.activitiesService.remove(id, req.user);
   }
 
   @Get('activities/:id/history')
@@ -167,6 +169,45 @@ export class ActivitiesController {
     return this.activitiesService.requestChanges(id, req.user.id, dto);
   }
 
+  @Post('activities/:id/resubmit')
+  @UseGuards(ParticipantJwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('activities.edit')
+  resubmit(@Param('id') id: string, @Req() req: { user: ActividadesUser }) {
+    return this.activitiesService.resubmit(id, req.user);
+  }
+
+  @Post('activities/:id/finalize')
+  @UseGuards(ParticipantJwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('activities.edit')
+  finalize(@Param('id') id: string, @Req() req: { user: ActividadesUser }) {
+    return this.activitiesService.finalize(id, req.user);
+  }
+
+  @Post('activities/:id/cancel')
+  @UseGuards(ParticipantJwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('activities.edit')
+  cancel(@Param('id') id: string, @Req() req: { user: ActividadesUser }) {
+    return this.activitiesService.cancel(id, req.user);
+  }
+
+  @Post('activities/:id/mark-incomplete')
+  @UseGuards(ParticipantJwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('activities.edit')
+  markIncomplete(@Param('id') id: string, @Req() req: { user: ActividadesUser }) {
+    return this.activitiesService.markIncomplete(id, req.user);
+  }
+
+  @Post('activities/:id/postpone')
+  @UseGuards(ParticipantJwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('activities.edit')
+  postpone(
+    @Param('id') id: string,
+    @Body() dto: PostponeActivityDto,
+    @Req() req: { user: ActividadesUser },
+  ) {
+    return this.activitiesService.postpone(id, req.user, dto);
+  }
+
   @Post('activities/:id/tasks')
   @UseGuards(ParticipantJwtAuthGuard, PermissionsGuard)
   @RequirePermissions('tasks.create')
@@ -175,25 +216,25 @@ export class ActivitiesController {
     @Body() dto: CreateTaskDto,
     @Req() req: { user: ActividadesUser },
   ) {
-    return this.activitiesService.createTask(id, dto, req.user.id);
+    return this.activitiesService.createTask(id, dto, req.user);
   }
 
   @Patch('tasks/:id')
   @UseGuards(ParticipantJwtAuthGuard, PermissionsGuard)
-  @RequirePermissions('tasks.edit')
+  @RequireAnyPermissions('tasks.edit', 'tasks.complete')
   updateTask(
     @Param('id') id: string,
     @Body() dto: UpdateTaskDto,
     @Req() req: { user: ActividadesUser },
   ) {
-    return this.activitiesService.updateTask(id, dto, req.user.id);
+    return this.activitiesService.updateTask(id, dto, req.user);
   }
 
   @Delete('tasks/:id')
   @UseGuards(ParticipantJwtAuthGuard, PermissionsGuard)
   @RequirePermissions('tasks.delete')
   deleteTask(@Param('id') id: string, @Req() req: { user: ActividadesUser }) {
-    return this.activitiesService.deleteTask(id, req.user.id);
+    return this.activitiesService.deleteTask(id, req.user);
   }
 
   @Get('tasks')

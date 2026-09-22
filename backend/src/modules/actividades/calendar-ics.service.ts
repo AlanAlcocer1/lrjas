@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ApprovalStatus } from '@prisma/client';
+import { ApprovalStatus, RecurrenceType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 function pad(n: number) {
@@ -13,6 +13,19 @@ function toIcsDateTime(date: Date, time: string) {
   const m = pad(date.getUTCMonth() + 1);
   const d = pad(date.getUTCDate());
   return `${y}${m}${d}T${hh.padStart(2, '0')}${mm.padStart(2, '0')}00`;
+}
+
+function toIcsDate(date: Date) {
+  const y = date.getUTCFullYear();
+  const m = pad(date.getUTCMonth() + 1);
+  const d = pad(date.getUTCDate());
+  return `${y}${m}${d}`;
+}
+
+function addDaysUtc(date: Date, days: number) {
+  const d = new Date(date.getTime());
+  d.setUTCDate(d.getUTCDate() + days);
+  return d;
 }
 
 function escapeIcs(text: string) {
@@ -37,6 +50,8 @@ function foldLine(line: string) {
   return parts.join('\r\n');
 }
 
+const ICS_WEEKDAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'] as const;
+
 @Injectable()
 export class CalendarIcsService {
   constructor(private prisma: PrismaService) {}
@@ -55,8 +70,13 @@ export class CalendarIcsService {
         description: a.publicDescription,
         location: a.location,
         date: a.date,
+        endDate: a.endDate,
         startTime: a.startTime,
         endTime: a.endTime,
+        recurrenceType: a.recurrenceType,
+        recurrenceInterval: a.recurrenceInterval,
+        recurrenceWeekdays: a.recurrenceWeekdays,
+        recurrenceUntil: a.recurrenceUntil,
         url: `${baseUrl}/public/actividades/${a.id}`,
       }),
     );
@@ -76,8 +96,13 @@ export class CalendarIcsService {
       description: a.publicDescription,
       location: a.location,
       date: a.date,
+      endDate: a.endDate,
       startTime: a.startTime,
       endTime: a.endTime,
+      recurrenceType: a.recurrenceType,
+      recurrenceInterval: a.recurrenceInterval,
+      recurrenceWeekdays: a.recurrenceWeekdays,
+      recurrenceUntil: a.recurrenceUntil,
       url: `${baseUrl}/public/actividades/${a.id}`,
     });
 
@@ -90,15 +115,16 @@ export class CalendarIcsService {
     description: string;
     location: string;
     date: Date;
+    endDate?: Date | null;
     startTime: string;
     endTime: string | null;
+    recurrenceType?: RecurrenceType;
+    recurrenceInterval?: number | null;
+    recurrenceWeekdays?: number[];
+    recurrenceUntil?: Date | null;
     url: string;
   }) {
-    const dtStart = toIcsDateTime(input.date, input.startTime);
-    const dtEnd = toIcsDateTime(
-      input.date,
-      input.endTime || this.addHour(input.startTime),
-    );
+    const multiDay = !!(input.endDate && input.endDate > input.date);
     const stamp = new Date()
       .toISOString()
       .replace(/[-:]/g, '')
@@ -108,15 +134,64 @@ export class CalendarIcsService {
       'BEGIN:VEVENT',
       `UID:${input.uid}`,
       `DTSTAMP:${stamp}`,
-      `DTSTART:${dtStart}`,
-      `DTEND:${dtEnd}`,
+    ];
+
+    if (multiDay) {
+      // All-day multi-día: DTEND exclusivo
+      lines.push(`DTSTART;VALUE=DATE:${toIcsDate(input.date)}`);
+      lines.push(`DTEND;VALUE=DATE:${toIcsDate(addDaysUtc(input.endDate!, 1))}`);
+    } else {
+      const dtStart = toIcsDateTime(input.date, input.startTime);
+      const dtEnd = toIcsDateTime(
+        input.date,
+        input.endTime || this.addHour(input.startTime),
+      );
+      lines.push(`DTSTART:${dtStart}`);
+      lines.push(`DTEND:${dtEnd}`);
+    }
+
+    const rrule = this.buildRrule(input);
+    if (rrule) lines.push(`RRULE:${rrule}`);
+
+    lines.push(
       `SUMMARY:${escapeIcs(input.name)}`,
       `DESCRIPTION:${escapeIcs(input.description)}`,
       `LOCATION:${escapeIcs(input.location)}`,
       `URL:${input.url}`,
       'END:VEVENT',
-    ];
+    );
     return lines.map(foldLine).join('\r\n');
+  }
+
+  private buildRrule(input: {
+    recurrenceType?: RecurrenceType;
+    recurrenceInterval?: number | null;
+    recurrenceWeekdays?: number[];
+    recurrenceUntil?: Date | null;
+  }): string | null {
+    if (!input.recurrenceType || input.recurrenceType === RecurrenceType.NONE) {
+      return null;
+    }
+
+    const parts: string[] = [];
+    if (input.recurrenceType === RecurrenceType.INTERVAL) {
+      parts.push('FREQ=DAILY');
+      parts.push(`INTERVAL=${input.recurrenceInterval ?? 1}`);
+    } else if (input.recurrenceType === RecurrenceType.WEEKLY) {
+      parts.push('FREQ=WEEKLY');
+      const days = (input.recurrenceWeekdays ?? [])
+        .map((d) => ICS_WEEKDAYS[d])
+        .filter(Boolean);
+      if (days.length) parts.push(`BYDAY=${days.join(',')}`);
+    } else {
+      return null;
+    }
+
+    if (input.recurrenceUntil) {
+      parts.push(`UNTIL=${toIcsDate(input.recurrenceUntil)}`);
+    }
+
+    return parts.join(';');
   }
 
   private wrapCalendar(name: string, events: string[]) {

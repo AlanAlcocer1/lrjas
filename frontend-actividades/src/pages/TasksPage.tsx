@@ -7,7 +7,7 @@ import type { ActivityTask } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge, EmptyState, Skeleton } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatDateShort, getErrorMessage, priorityLabel } from '@/lib/utils';
+import { formatDateShort, getErrorMessage, priorityLabel, canCompleteTasks, isActivityClosed } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 
 export function TasksPage() {
@@ -29,6 +29,14 @@ export function TasksPage() {
   const complete = async (task: ActivityTask) => {
     if (!hasPermission('tasks.complete') && !hasPermission('tasks.edit')) {
       toast.error('No tienes permiso para completar tareas');
+      return;
+    }
+    if (isActivityClosed(task.activity?.status?.name)) {
+      toast.error('Esta actividad ya está cerrada');
+      return;
+    }
+    if (!canCompleteTasks(task.activity?.status?.name)) {
+      toast.error('No puedes completar tareas hasta que la actividad esté en Planificación o posterior');
       return;
     }
     try {
@@ -79,13 +87,27 @@ export function TasksPage() {
                         Vence {formatDateShort(task.dueDate)}
                       </p>
                     )}
+                    {task.activity?.status &&
+                      !canCompleteTasks(task.activity.status.name) && (
+                      <p className="text-xs text-amber-700 mt-1">
+                        {task.activity.status.name} — aún no se puede completar
+                      </p>
+                    )}
                   </div>
                   <Badge variant={task.priority === 'HIGH' ? 'destructive' : 'secondary'}>
                     {priorityLabel(task.priority)}
                   </Badge>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => complete(task)}>
-                  Marcar hecha
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => complete(task)}
+                  disabled={
+                    isActivityClosed(task.activity?.status?.name) ||
+                    !canCompleteTasks(task.activity?.status?.name)
+                  }
+                >
+                  Marcar como completada
                 </Button>
               </CardContent>
             </Card>

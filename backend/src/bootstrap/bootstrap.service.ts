@@ -11,6 +11,7 @@ import { ensureActivityStatuses } from './ensure-activity-statuses';
 import { ensureDefaultTeams } from './ensure-default-teams';
 import { ensureDefaultAccessRoles } from './ensure-default-access-roles';
 import { ensureActividadesBootstrapAdmins } from './ensure-actividades-bootstrap-admins';
+import { ensureMatrimoniosGuest } from './ensure-matrimonios-guest';
 
 @Injectable()
 export class BootstrapService implements OnModuleInit {
@@ -28,6 +29,7 @@ export class BootstrapService implements OnModuleInit {
     await ensureActivityStatuses(this.prisma);
     await ensureDefaultTeams(this.prisma);
     await ensureDefaultAccessRoles(this.prisma);
+    await ensureMatrimoniosGuest(this.prisma);
     await ensureActividadesBootstrapAdmins(this.prisma);
   }
 }

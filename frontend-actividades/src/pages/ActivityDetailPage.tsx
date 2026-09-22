@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -8,6 +8,8 @@ import {
   Loader2,
   MapPin,
   Plus,
+  Repeat,
+  Trash2,
   XCircle,
 } from 'lucide-react';
 import { activitiesApi, usersApi } from '@/services/api';
@@ -40,27 +42,63 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import {
   approvalLabel,
+  canCompleteTasks,
   formatDate,
   formatFullName,
   formatMoney,
   getErrorMessage,
+  historyActionDetail,
+  historyActionLabel,
+  isActivityClosed,
+  canManageActivityTeam,
   priorityLabel,
   taskStatusLabel,
 } from '@/lib/utils';
 
+type DraftBudgetItem = {
+  concept: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+const PENDING_BUDGET_STATUSES = new Set([
+  'En espera de aprobación',
+  'Cambios solicitados',
+]);
+
 export function ActivityDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [activity, setActivity] = useState<Activity | null>(null);
   const [history, setHistory] = useState<ActivityHistoryEntry[]>([]);
   const [users, setUsers] = useState<ActividadesUserRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusSaving, setStatusSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [budgetSaving, setBudgetSaving] = useState(false);
+  const [budgetOpen, setBudgetOpen] = useState(false);
+  const [budgetNotes, setBudgetNotes] = useState('');
+  const [budgetItems, setBudgetItems] = useState<DraftBudgetItem[]>([
+    { concept: '', quantity: 1, unitPrice: 0 },
+  ]);
+  const [postponeOpen, setPostponeOpen] = useState(false);
+  const [postponeSaving, setPostponeSaving] = useState(false);
+  const [postponeDate, setPostponeDate] = useState('');
+  const [postponeEndDate, setPostponeEndDate] = useState('');
+  const [postponeStart, setPostponeStart] = useState('18:00');
+  const [postponeEnd, setPostponeEnd] = useState('');
+  const [postponeReason, setPostponeReason] = useState('');
+  const [postponeTaskDates, setPostponeTaskDates] = useState<Record<string, string>>({});
   const [comments, setComments] = useState('');
   const [rejectReason, setRejectReason] = useState('');
   const [taskOpen, setTaskOpen] = useState(false);
   const [newTask, setNewTask] = useState({ name: '', assigneeId: '', dueDate: '', priority: 'MEDIUM' as TaskPriority });
+
+  const budgetTotal = useMemo(
+    () => budgetItems.reduce((sum, i) => sum + Number(i.quantity || 0) * Number(i.unitPrice || 0), 0),
+    [budgetItems],
+  );
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -80,7 +118,7 @@ export function ActivityDetailPage() {
 
   useEffect(() => {
     load();
-    if (hasPermission('users.view')) {
+    if (hasPermission('users.view') || hasPermission('users.assign')) {
       usersApi.search().then(setUsers).catch(() => []);
     }
   }, [load, hasPermission]);
@@ -111,6 +149,14 @@ export function ActivityDetailPage() {
   };
 
   const toggleTask = async (task: ActivityTask) => {
+    if (isActivityClosed(activity?.status?.name)) {
+      toast.error('Esta actividad ya está cerrada');
+      return;
+    }
+    if (!task.completed && !canCompleteTasks(activity?.status?.name)) {
+      toast.error('No puedes completar tareas hasta que la actividad esté en Planificación o posterior');
+      return;
+    }
     try {
       await activitiesApi.updateTask(task.id, { completed: !task.completed });
       await load();
@@ -119,8 +165,57 @@ export function ActivityDetailPage() {
     }
   };
 
+  const runStatusAction = async (
+    action: 'resubmit' | 'finalize' | 'cancel' | 'incomplete',
+  ) => {
+    if (!id) return;
+    setStatusSaving(true);
+    try {
+      const updated =
+        action === 'resubmit'
+          ? await activitiesApi.resubmit(id)
+          : action === 'finalize'
+            ? await activitiesApi.finalize(id)
+            : action === 'cancel'
+              ? await activitiesApi.cancel(id)
+              : await activitiesApi.markIncomplete(id);
+      setActivity(updated);
+      toast.success(
+        action === 'resubmit'
+          ? 'Reenviada a aprobación'
+          : action === 'finalize'
+            ? 'Actividad finalizada'
+            : action === 'cancel'
+              ? 'Actividad cancelada'
+              : 'Marcada como incompleta',
+      );
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setStatusSaving(false);
+    }
+  };
+
+  const removeActivity = async () => {
+    if (!id || !activity) return;
+    if (!window.confirm(`¿Eliminar permanentemente "${activity.name}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    try {
+      await activitiesApi.remove(id);
+      toast.success('Actividad eliminada');
+      navigate('/actividades');
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  };
+
   const createTask = async () => {
     if (!id || !newTask.name.trim()) return;
+    if (isActivityClosed(activity?.status?.name)) {
+      toast.error('Esta actividad ya está cerrada');
+      return;
+    }
     try {
       await activitiesApi.createTask(id, {
         name: newTask.name.trim(),
@@ -134,6 +229,118 @@ export function ActivityDetailPage() {
       await load();
     } catch (err) {
       toast.error(getErrorMessage(err));
+    }
+  };
+
+  const openPostpone = () => {
+    if (!activity) return;
+    const dateKey = activity.date.slice(0, 10);
+    setPostponeDate(dateKey);
+    setPostponeEndDate(activity.endDate ? activity.endDate.slice(0, 10) : '');
+    setPostponeStart(activity.startTime || '18:00');
+    setPostponeEnd(activity.endTime || '');
+    setPostponeReason('');
+    const map: Record<string, string> = {};
+    for (const t of activity.tasks) {
+      if (t.dueDate) map[t.id] = t.dueDate.slice(0, 10);
+    }
+    setPostponeTaskDates(map);
+    setPostponeOpen(true);
+  };
+
+  const applyPostponeDateShift = (newDate: string) => {
+    if (!activity) {
+      setPostponeDate(newDate);
+      return;
+    }
+    const oldKey = activity.date.slice(0, 10);
+    const deltaDays = Math.round(
+      (Date.parse(`${newDate}T12:00:00`) - Date.parse(`${oldKey}T12:00:00`)) / 86400000,
+    );
+    setPostponeDate(newDate);
+    if (activity.endDate) {
+      const endKey = activity.endDate.slice(0, 10);
+      setPostponeEndDate(
+        new Date(Date.parse(`${endKey}T12:00:00`) + deltaDays * 86400000)
+          .toISOString()
+          .slice(0, 10),
+      );
+    } else {
+      setPostponeEndDate('');
+    }
+    const map: Record<string, string> = {};
+    for (const t of activity.tasks) {
+      if (t.dueDate) {
+        map[t.id] = new Date(
+          Date.parse(`${t.dueDate.slice(0, 10)}T12:00:00`) + deltaDays * 86400000,
+        )
+          .toISOString()
+          .slice(0, 10);
+      }
+    }
+    setPostponeTaskDates(map);
+  };
+
+  const savePostpone = async () => {
+    if (!id || !postponeDate || !postponeStart) return;
+    setPostponeSaving(true);
+    try {
+      const updated = await activitiesApi.postpone(id, {
+        date: postponeDate,
+        endDate: postponeEndDate || null,
+        startTime: postponeStart,
+        endTime: postponeEnd || null,
+        reason: postponeReason.trim() || undefined,
+        taskDueDates: Object.entries(postponeTaskDates).map(([taskId, dueDate]) => ({
+          taskId,
+          dueDate,
+        })),
+      });
+      setActivity(updated);
+      setPostponeOpen(false);
+      toast.success('Actividad pospuesta — pendiente de reaprobación');
+      await load();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setPostponeSaving(false);
+    }
+  };
+
+  const openAddBudget = () => {
+    setBudgetNotes('');
+    setBudgetItems([{ concept: '', quantity: 1, unitPrice: 0 }]);
+    setBudgetOpen(true);
+  };
+
+  const saveBudget = async () => {
+    if (!id) return;
+    const items = budgetItems.filter((i) => i.concept.trim() && i.quantity > 0);
+    if (items.length === 0) {
+      toast.error('Agrega al menos un concepto');
+      return;
+    }
+    setBudgetSaving(true);
+    try {
+      const updated = await activitiesApi.update(id, {
+        requiresBudget: true,
+        budget: {
+          requestedAmount: budgetTotal,
+          notes: budgetNotes.trim() || undefined,
+          items: items.map((i) => ({
+            concept: i.concept.trim(),
+            quantity: Number(i.quantity),
+            unitPrice: Number(i.unitPrice),
+          })),
+        },
+      });
+      setActivity(updated);
+      setBudgetOpen(false);
+      toast.success('Presupuesto agregado');
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setBudgetSaving(false);
     }
   };
 
@@ -158,6 +365,7 @@ export function ActivityDetailPage() {
   }
 
   const primary = activity.responsibles?.find((r) => r.type === 'PRIMARY')?.participant;
+  const canManage = canManageActivityTeam(user, activity.teamId);
 
   return (
     <div className="space-y-5">
@@ -172,21 +380,11 @@ export function ActivityDetailPage() {
           <div>
             <h1 className="text-2xl font-bold">{activity.name}</h1>
             <div className="flex flex-wrap gap-2 mt-2">
-              <Badge
-                variant={
-                  activity.approvalStatus === 'APPROVED'
-                    ? 'success'
-                    : activity.approvalStatus === 'REJECTED'
-                      ? 'destructive'
-                      : activity.approvalStatus === 'CHANGES_REQUESTED'
-                        ? 'warning'
-                        : 'secondary'
-                }
-              >
-                {approvalLabel(activity.approvalStatus)}
-              </Badge>
               {activity.status && (
-                <Badge variant="outline" style={{ borderColor: activity.status.color, color: activity.status.color }}>
+                <Badge
+                  variant="outline"
+                  style={{ borderColor: activity.status.color, color: activity.status.color }}
+                >
                   {activity.status.name}
                 </Badge>
               )}
@@ -206,13 +404,31 @@ export function ActivityDetailPage() {
 
         <TabsContent value="resumen" className="space-y-4">
           <Card>
-            <CardContent className="p-4 space-y-3 text-sm">
+            <CardContent className="p-5 sm:p-6 space-y-3 text-sm">
               <p className="text-muted-foreground whitespace-pre-wrap">{activity.publicDescription}</p>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Calendar className="h-4 w-4" />
-                {formatDate(activity.date)} · {activity.startTime}
+                {formatDate(activity.date)}
+                {activity.endDate && activity.endDate.slice(0, 10) !== activity.date.slice(0, 10)
+                  ? ` – ${formatDate(activity.endDate)}`
+                  : ''}
+                {' · '}
+                {activity.startTime}
                 {activity.endTime ? `–${activity.endTime}` : ''}
               </div>
+              {(activity.recurrenceType === 'INTERVAL' || activity.recurrenceType === 'WEEKLY') && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Repeat className="h-4 w-4" />
+                  {activity.recurrenceType === 'INTERVAL'
+                    ? `Cada ${activity.recurrenceInterval ?? 1} día${(activity.recurrenceInterval ?? 1) === 1 ? '' : 's'}`
+                    : `Semanal: ${(activity.recurrenceWeekdays ?? [])
+                        .map((d) => ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][d])
+                        .join(', ')}`}
+                  {activity.recurrenceUntil
+                    ? ` · hasta ${formatDate(activity.recurrenceUntil)}`
+                    : ''}
+                </div>
+              )}
               <div className="flex items-center gap-2 text-muted-foreground">
                 <MapPin className="h-4 w-4" />
                 {activity.locationUrl ? (
@@ -225,6 +441,78 @@ export function ActivityDetailPage() {
               </div>
               {activity.team && <p>Equipo: {activity.team.name}</p>}
               {primary && <p>Responsable: {formatFullName(primary)}</p>}
+              {canManage && hasPermission('activities.edit') && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {activity.approvalStatus === 'CHANGES_REQUESTED' && (
+                    <Button
+                      size="sm"
+                      disabled={statusSaving}
+                      onClick={() => runStatusAction('resubmit')}
+                    >
+                      Reenviar a aprobación
+                    </Button>
+                  )}
+                  {(activity.status?.name === 'Planificación' ||
+                    activity.status?.name === 'En curso' ||
+                    activity.status?.name === 'Incompleta') && (
+                    <>
+                      <Button
+                        size="sm"
+                        disabled={statusSaving}
+                        onClick={() => runStatusAction('finalize')}
+                      >
+                        Finalizar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={statusSaving}
+                        onClick={openPostpone}
+                      >
+                        Posponer
+                      </Button>
+                    </>
+                  )}
+                  {(activity.status?.name === 'Planificación' ||
+                    activity.status?.name === 'En curso') && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={statusSaving}
+                      onClick={() => runStatusAction('incomplete')}
+                    >
+                      Marcar incompleta
+                    </Button>
+                  )}
+                  {activity.status?.name !== 'Finalizada' &&
+                    activity.status?.name !== 'Cancelada' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-destructive hover:text-destructive"
+                        disabled={statusSaving}
+                        onClick={() => {
+                          if (window.confirm('¿Cancelar esta actividad?')) {
+                            runStatusAction('cancel');
+                          }
+                        }}
+                      >
+                        Cancelar actividad
+                      </Button>
+                    )}
+                  {hasPermission('activities.delete') && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive hover:text-destructive"
+                      onClick={removeActivity}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Eliminar
+                    </Button>
+                  )}
+                </div>
+              )}
               {activity.progress && activity.progress.total > 0 && (
                 <div>
                   <div className="flex justify-between text-xs mb-1">
@@ -250,7 +538,17 @@ export function ActivityDetailPage() {
         </TabsContent>
 
         <TabsContent value="tareas" className="space-y-3">
-          {hasPermission('tasks.create') && (
+          {isActivityClosed(activity.status?.name) ? (
+            <p className="text-sm text-muted-foreground bg-muted border border-border rounded-xl px-3 py-2">
+              Esta actividad está {activity.status?.name?.toLowerCase()}: ya no se pueden agregar ni
+              modificar tareas.
+            </p>
+          ) : !canCompleteTasks(activity.status?.name) ? (
+            <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+              Las tareas se completan cuando la actividad esté en Planificación, En curso o Incompleta.
+            </p>
+          ) : null}
+          {canManage && hasPermission('tasks.create') && !isActivityClosed(activity.status?.name) && (
             <Button size="sm" onClick={() => setTaskOpen(true)}>
               <Plus className="h-4 w-4" />
               Nueva tarea
@@ -263,16 +561,28 @@ export function ActivityDetailPage() {
               description="Agrega tareas para organizar el trabajo."
             />
           ) : (
-            activity.tasks.map((task) => (
+            activity.tasks.map((task) => {
+              const canToggle =
+                !isActivityClosed(activity.status?.name) &&
+                (hasPermission('tasks.edit') || hasPermission('tasks.complete')) &&
+                (task.completed || canCompleteTasks(activity.status?.name));
+              return (
               <Card key={task.id}>
                 <CardContent className="p-3 flex items-start gap-3">
                   <button
                     type="button"
-                    disabled={!hasPermission('tasks.edit') && !hasPermission('tasks.complete')}
+                    disabled={!canToggle}
                     onClick={() => toggleTask(task)}
+                    title={
+                      isActivityClosed(activity.status?.name)
+                        ? 'Actividad cerrada'
+                        : !task.completed && !canCompleteTasks(activity.status?.name)
+                          ? 'Espera a que aprueben la actividad'
+                          : undefined
+                    }
                     className={`mt-0.5 h-5 w-5 rounded border flex items-center justify-center shrink-0 ${
                       task.completed ? 'bg-primary border-primary text-white' : 'border-border'
-                    }`}
+                    } ${!canToggle ? 'opacity-40 cursor-not-allowed' : ''}`}
                   >
                     {task.completed ? <Check className="h-3 w-3" /> : null}
                   </button>
@@ -288,59 +598,91 @@ export function ActivityDetailPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))
+              );
+            })
           )}
         </TabsContent>
 
-        <TabsContent value="presupuesto">
-          {!activity.requiresBudget || !activity.budget ? (
-            <EmptyState
-              icon={Calendar}
-              title="Sin presupuesto"
-              description="Esta actividad no requiere presupuesto."
-            />
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Presupuesto</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <MoneyStat label="Solicitado" value={activity.budget.requestedAmount} />
-                  <MoneyStat label="Aprobado" value={activity.budget.approvedAmount} />
-                  <MoneyStat label="Gastado" value={activity.budget.spentAmount} />
+        <TabsContent value="presupuesto" className="space-y-3">
+          {(() => {
+            const canAddLater =
+              !activity.budget &&
+              canManage &&
+              PENDING_BUDGET_STATUSES.has(activity.status?.name ?? '') &&
+              (hasPermission('budgets.create') ||
+                hasPermission('budgets.edit') ||
+                hasPermission('activities.edit'));
+
+            if (!activity.requiresBudget || !activity.budget) {
+              return (
+                <div className="space-y-3">
+                  <EmptyState
+                    icon={Calendar}
+                    title="Sin presupuesto"
+                    description={
+                      canAddLater
+                        ? 'Se les olvidó? Puedes agregarlo mientras esté en espera.'
+                        : 'Esta actividad no tiene presupuesto.'
+                    }
+                  />
+                  {canAddLater && (
+                    <Button onClick={openAddBudget}>
+                      <Plus className="h-4 w-4" />
+                      Agregar presupuesto
+                    </Button>
+                  )}
                 </div>
-                {activity.budget.items?.length > 0 && (
-                  <div className="space-y-2">
-                    {activity.budget.items.map((item, i) => (
-                      <div key={item.id || i} className="flex justify-between text-sm border-b border-border pb-2">
-                        <span>
-                          {item.concept}{' '}
-                          <span className="text-muted-foreground">
-                            ×{item.quantity}
-                          </span>
-                        </span>
-                        <span className="font-medium">
-                          {formatMoney(item.total ?? Number(item.quantity) * Number(item.unitPrice))}
-                        </span>
-                      </div>
-                    ))}
+              );
+            }
+
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Presupuesto</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <MoneyStat label="Solicitado" value={activity.budget.requestedAmount} />
+                    <MoneyStat label="Aprobado" value={activity.budget.approvedAmount} />
+                    <MoneyStat label="Gastado" value={activity.budget.spentAmount} />
                   </div>
-                )}
-                {activity.budget.notes && (
-                  <p className="text-sm text-muted-foreground">{activity.budget.notes}</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                  {activity.budget.items?.length > 0 && (
+                    <div className="space-y-2">
+                      {activity.budget.items.map((item, i) => (
+                        <div key={item.id || i} className="flex justify-between text-sm border-b border-border pb-2">
+                          <span>
+                            {item.concept}{' '}
+                            <span className="text-muted-foreground">
+                              ×{item.quantity}
+                            </span>
+                          </span>
+                          <span className="font-medium">
+                            {formatMoney(item.total ?? Number(item.quantity) * Number(item.unitPrice))}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {activity.budget.notes && (
+                    <p className="text-sm text-muted-foreground">{activity.budget.notes}</p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="aprobacion" className="space-y-4">
           <Card>
             <CardContent className="p-4 space-y-3 text-sm">
               <p>
-                Estado: <strong>{approvalLabel(activity.approvalStatus)}</strong>
+                Estado: <strong>{activity.status?.name ?? approvalLabel(activity.approvalStatus)}</strong>
               </p>
+              {activity.status?.name === 'Pospuesta' && (
+                <p className="text-sm text-purple-800 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
+                  Fue pospuesta: hay que aprobar la nueva fecha antes de continuar.
+                </p>
+              )}
               {activity.approvedBy && (
                 <p>
                   Revisado por {formatFullName(activity.approvedBy)}
@@ -407,19 +749,29 @@ export function ActivityDetailPage() {
             {history.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Sin eventos aún</p>
             ) : (
-              history.map((h) => (
-                <Card key={h.id}>
-                  <CardContent className="p-3 text-sm">
-                    <div className="flex justify-between gap-2">
-                      <span className="font-medium capitalize">{h.action}</span>
-                      <span className="text-xs text-muted-foreground">{formatDate(h.createdAt)}</span>
-                    </div>
-                    {h.participant && (
-                      <p className="text-xs text-muted-foreground mt-1">{formatFullName(h.participant)}</p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
+              history.map((h) => {
+                const detail = historyActionDetail(h.action, h.oldValue, h.newValue);
+                return (
+                  <Card key={h.id}>
+                    <CardContent className="p-3 text-sm">
+                      <div className="flex justify-between gap-2">
+                        <span className="font-medium">{historyActionLabel(h.action)}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {formatDate(h.createdAt)}
+                        </span>
+                      </div>
+                      {detail && (
+                        <p className="text-xs text-muted-foreground mt-1 break-words">{detail}</p>
+                      )}
+                      {h.participant && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatFullName(h.participant)}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </TabsContent>
         )}
@@ -482,6 +834,180 @@ export function ActivityDetailPage() {
             )}
             <Button className="w-full" onClick={createTask}>
               Guardar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={budgetOpen} onOpenChange={setBudgetOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Agregar presupuesto</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {budgetItems.map((item, idx) => (
+              <div key={idx} className="grid grid-cols-6 gap-2 items-end">
+                <div className="col-span-6 sm:col-span-3 space-y-1">
+                  <Label className="text-xs">Concepto</Label>
+                  <Input
+                    value={item.concept}
+                    onChange={(e) => {
+                      const next = [...budgetItems];
+                      next[idx] = { ...item, concept: e.target.value };
+                      setBudgetItems(next);
+                    }}
+                  />
+                </div>
+                <div className="col-span-2 sm:col-span-1 space-y-1">
+                  <Label className="text-xs">Cant.</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={item.quantity}
+                    onChange={(e) => {
+                      const next = [...budgetItems];
+                      next[idx] = { ...item, quantity: Number(e.target.value) };
+                      setBudgetItems(next);
+                    }}
+                  />
+                </div>
+                <div className="col-span-3 sm:col-span-1 space-y-1">
+                  <Label className="text-xs">P. unit.</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={item.unitPrice}
+                    onChange={(e) => {
+                      const next = [...budgetItems];
+                      next[idx] = { ...item, unitPrice: Number(e.target.value) };
+                      setBudgetItems(next);
+                    }}
+                  />
+                </div>
+                <div className="col-span-1 flex justify-end">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    disabled={budgetItems.length <= 1}
+                    onClick={() => setBudgetItems(budgetItems.filter((_, i) => i !== idx))}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => setBudgetItems([...budgetItems, { concept: '', quantity: 1, unitPrice: 0 }])}
+            >
+              <Plus className="h-4 w-4" />
+              Agregar partida
+            </Button>
+            <div className="space-y-2">
+              <Label>Notas (opcional)</Label>
+              <Textarea value={budgetNotes} onChange={(e) => setBudgetNotes(e.target.value)} />
+            </div>
+            <p className="text-sm font-medium text-right">
+              Total: {formatMoney(budgetTotal)}
+            </p>
+            <Button className="w-full" disabled={budgetSaving} onClick={saveBudget}>
+              {budgetSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Guardar presupuesto
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={postponeOpen} onOpenChange={setPostponeOpen}>
+        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Posponer actividad</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Se actualizará la fecha/hora y las tareas; la actividad quedará como Pospuesta y deberá
+            aprobarse de nuevo.
+          </p>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Nueva fecha inicio</Label>
+                <Input
+                  type="date"
+                  value={postponeDate}
+                  onChange={(e) => applyPostponeDateShift(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Fecha fin (opcional)</Label>
+                <Input
+                  type="date"
+                  value={postponeEndDate}
+                  min={postponeDate || undefined}
+                  onChange={(e) => setPostponeEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Hora inicio</Label>
+                <Input
+                  type="time"
+                  value={postponeStart}
+                  onChange={(e) => setPostponeStart(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Hora fin</Label>
+                <Input
+                  type="time"
+                  value={postponeEnd}
+                  onChange={(e) => setPostponeEnd(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Motivo (opcional)</Label>
+              <Textarea
+                value={postponeReason}
+                onChange={(e) => setPostponeReason(e.target.value)}
+                placeholder="Ej. Lluvia, cambio de sede…"
+              />
+            </div>
+            {activity && Object.keys(postponeTaskDates).length > 0 && (
+              <div className="space-y-2">
+                <Label>Fechas de tareas</Label>
+                <div className="space-y-2 max-h-40 overflow-y-auto rounded-lg border border-border p-3">
+                  {activity.tasks
+                    .filter((t) => postponeTaskDates[t.id] !== undefined)
+                    .map((t) => (
+                      <div key={t.id} className="flex items-center gap-2 text-sm">
+                        <span className="flex-1 min-w-0 truncate">{t.name}</span>
+                        <Input
+                          type="date"
+                          className="w-auto"
+                          value={postponeTaskDates[t.id] || ''}
+                          onChange={(e) =>
+                            setPostponeTaskDates((prev) => ({
+                              ...prev,
+                              [t.id]: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+            <Button
+              className="w-full"
+              disabled={postponeSaving || !postponeDate || !postponeStart}
+              onClick={savePostpone}
+            >
+              {postponeSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Posponer y pedir reaprobación
             </Button>
           </div>
         </DialogContent>

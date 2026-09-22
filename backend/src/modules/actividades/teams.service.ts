@@ -77,7 +77,13 @@ export class TeamsService {
 
   async remove(id: string) {
     await this.findOne(id);
-    await this.prisma.team.delete({ where: { id } });
+    await this.prisma.$transaction([
+      this.prisma.activity.updateMany({
+        where: { teamId: id },
+        data: { teamId: null },
+      }),
+      this.prisma.team.delete({ where: { id } }),
+    ]);
     return { ok: true };
   }
 

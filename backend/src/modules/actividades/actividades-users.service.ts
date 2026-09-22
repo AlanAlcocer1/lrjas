@@ -29,7 +29,12 @@ export class ActividadesUsersService {
               { motherLastName: { contains: query, mode: 'insensitive' } },
             ],
           }
-        : { accessRoles: { some: {} } },
+        : {
+            OR: [
+              { accessRoles: { some: {} } },
+              { teamMemberships: { some: {} } },
+            ],
+          },
       take: 50,
       orderBy: { code: 'asc' },
       include: {

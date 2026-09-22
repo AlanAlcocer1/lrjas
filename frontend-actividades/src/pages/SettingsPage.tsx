@@ -30,9 +30,6 @@ export function SettingsPage() {
   const [roleName, setRoleName] = useState('');
   const [roleDesc, setRoleDesc] = useState('');
   const [permIds, setPermIds] = useState<string[]>([]);
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [statusName, setStatusName] = useState('');
-  const [statusColor, setStatusColor] = useState('#84bd31');
 
   const permGroups = useMemo(() => {
     const map = new Map<string, Permission[]>();
@@ -119,19 +116,6 @@ export function SettingsPage() {
     }
   };
 
-  const createStatus = async () => {
-    if (!statusName.trim()) return;
-    try {
-      await activitiesApi.createStatus({ name: statusName.trim(), color: statusColor });
-      toast.success('Estado creado');
-      setStatusOpen(false);
-      setStatusName('');
-      load();
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    }
-  };
-
   if (loading) {
     return (
       <div className="space-y-3">
@@ -155,7 +139,7 @@ export function SettingsPage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold">Configuración</h1>
-        <p className="text-sm text-muted-foreground">Roles y estados operativos</p>
+        <p className="text-sm text-muted-foreground">Roles y flujo de estados</p>
       </div>
 
       <Tabs defaultValue={hasPermission('roles.view') ? 'roles' : 'estados'}>
@@ -202,12 +186,10 @@ export function SettingsPage() {
         )}
 
         <TabsContent value="estados" className="space-y-3">
-          {hasPermission('settings.manage') && (
-            <Button size="sm" onClick={() => setStatusOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Nuevo estado
-            </Button>
-          )}
+          <p className="text-sm text-muted-foreground">
+            Flujo fijo: En espera → (aprobación) Planificación → En curso → Finalizada.
+            También: Cambios solicitados, Rechazada, Incompleta, Pospuesta y Cancelada.
+          </p>
           {statuses.map((s) => (
             <Card key={s.id}>
               <CardContent className="p-4 flex items-center gap-3">
@@ -217,7 +199,6 @@ export function SettingsPage() {
                   <div className="flex gap-1 mt-1">
                     {s.isInitial && <Badge variant="secondary">Inicial</Badge>}
                     {s.isFinal && <Badge variant="secondary">Final</Badge>}
-                    {!s.isActive && <Badge variant="outline">Inactivo</Badge>}
                   </div>
                 </div>
               </CardContent>
@@ -270,27 +251,6 @@ export function SettingsPage() {
             )}
             <Button className="w-full" onClick={saveRole}>
               Guardar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={statusOpen} onOpenChange={setStatusOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nuevo estado</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label>Nombre</Label>
-              <Input value={statusName} onChange={(e) => setStatusName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Color</Label>
-              <Input type="color" value={statusColor} onChange={(e) => setStatusColor(e.target.value)} />
-            </div>
-            <Button className="w-full" onClick={createStatus}>
-              Crear
             </Button>
           </div>
         </DialogContent>

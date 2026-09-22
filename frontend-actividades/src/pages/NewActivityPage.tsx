@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, ArrowRight, Check, Loader2, Plus, Trash2 } from 'lucide-react';
 import { activitiesApi, teamsApi, usersApi } from '@/services/api';
-import type { ActividadesUserRow, CreateActivityPayload, TaskPriority, Team } from '@/types';
+import type { ActividadesUserRow, CreateActivityPayload, RecurrenceType, TaskPriority, Team } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,20 +37,34 @@ type DraftBudgetItem = {
 
 export function NewActivityPage() {
   const navigate = useNavigate();
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, refreshUser } = useAuth();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<ActividadesUserRow[]>([]);
+  const [sessionUser, setSessionUser] = useState(user);
+
+  const manageAll = hasPermission('activities.manage_all');
+  const myTeamIds = sessionUser?.teamIds ?? [];
+
+  const selectableTeams = useMemo(() => {
+    if (manageAll) return teams;
+    return teams.filter((t) => myTeamIds.includes(t.id));
+  }, [teams, manageAll, myTeamIds]);
 
   const [name, setName] = useState('');
   const [publicDescription, setPublicDescription] = useState('');
   const [internalDescription, setInternalDescription] = useState('');
   const [date, setDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [startTime, setStartTime] = useState('18:00');
   const [endTime, setEndTime] = useState('');
   const [location, setLocation] = useState('');
   const [locationUrl, setLocationUrl] = useState('');
+  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('NONE');
+  const [recurrenceInterval, setRecurrenceInterval] = useState(7);
+  const [recurrenceWeekdays, setRecurrenceWeekdays] = useState<number[]>([]);
+  const [recurrenceUntil, setRecurrenceUntil] = useState('');
   const [teamId, setTeamId] = useState<string>('');
   const [primaryResponsibleId, setPrimaryResponsibleId] = useState(user?.id ?? '');
   const [secondaryIds, setSecondaryIds] = useState<string[]>([]);
@@ -67,15 +81,32 @@ export function NewActivityPage() {
       navigate('/');
       return;
     }
-    Promise.all([
-      hasPermission('teams.view') ? teamsApi.list().catch(() => []) : Promise.resolve([]),
-      hasPermission('users.view') ? usersApi.search().catch(() => []) : Promise.resolve([]),
-    ]).then(([t, u]) => {
+    let cancelled = false;
+    (async () => {
+      const me = await refreshUser();
+      if (cancelled) return;
+      setSessionUser(me);
+      const [t, u] = await Promise.all([
+        hasPermission('teams.view') ? teamsApi.list().catch(() => []) : Promise.resolve([] as Team[]),
+        hasPermission('users.view') || hasPermission('users.assign')
+          ? usersApi.search().catch(() => [])
+          : Promise.resolve([] as ActividadesUserRow[]),
+      ]);
+      if (cancelled) return;
       setTeams(t);
       setUsers(u);
-      if (!primaryResponsibleId && user?.id) setPrimaryResponsibleId(user.id);
-    });
-  }, [hasPermission, navigate, primaryResponsibleId, user?.id]);
+      if (me?.id) setPrimaryResponsibleId((prev) => prev || me.id);
+      const teamIds = me?.teamIds ?? [];
+      const mine = hasPermission('activities.manage_all')
+        ? t
+        : t.filter((team) => teamIds.includes(team.id));
+      if (mine.length === 1) setTeamId(mine[0].id);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Solo al entrar a la pantalla: refreshUser trae equipos actualizados
+  }, [hasPermission, navigate, refreshUser]);
 
   const requestedAmount = useMemo(
     () => budgetItems.reduce((sum, i) => sum + Number(i.quantity || 0) * Number(i.unitPrice || 0), 0),
@@ -84,12 +115,24 @@ export function NewActivityPage() {
 
   const canNext = () => {
     if (step === 0) return name.trim().length >= 2 && publicDescription.trim().length >= 1;
-    if (step === 1) return !!date && !!startTime && location.trim().length >= 1;
-    if (step === 2) return !!primaryResponsibleId;
+    if (step === 1) {
+      if (!date || !startTime || location.trim().length < 1) return false;
+      if (endDate && endDate < date) return false;
+      if (recurrenceType === 'WEEKLY' && recurrenceWeekdays.length === 0) return false;
+      if (recurrenceType === 'INTERVAL' && recurrenceInterval < 1) return false;
+      return true;
+    }
+    if (step === 2) return !!primaryResponsibleId && (!!teamId || manageAll);
     if (step === 4 && requiresBudget) {
       return budgetItems.some((i) => i.concept.trim() && i.quantity > 0);
     }
     return true;
+  };
+
+  const toggleWeekday = (day: number) => {
+    setRecurrenceWeekdays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort((a, b) => a - b),
+    );
   };
 
   const toggleSecondary = (id: string) => {
@@ -106,6 +149,7 @@ export function NewActivityPage() {
         publicDescription: publicDescription.trim(),
         internalDescription: internalDescription.trim() || undefined,
         date,
+        endDate: endDate || undefined,
         startTime,
         endTime: endTime || undefined,
         location: location.trim(),
@@ -115,6 +159,10 @@ export function NewActivityPage() {
         secondaryResponsibleIds: secondaryIds.filter((id) => id !== primaryResponsibleId),
         requiresBudget,
         internalNotes: internalNotes.trim() || undefined,
+        recurrenceType,
+        recurrenceInterval: recurrenceType === 'INTERVAL' ? recurrenceInterval : undefined,
+        recurrenceWeekdays: recurrenceType === 'WEEKLY' ? recurrenceWeekdays : undefined,
+        recurrenceUntil: recurrenceType !== 'NONE' && recurrenceUntil ? recurrenceUntil : undefined,
         tasks: tasks
           .filter((t) => t.name.trim())
           .map((t) => ({
@@ -199,9 +247,22 @@ export function NewActivityPage() {
 
           {step === 1 && (
             <>
-              <Field label="Fecha">
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Fecha inicio">
+                  <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                </Field>
+                <Field label="Fecha fin (opcional)">
+                  <Input
+                    type="date"
+                    value={endDate}
+                    min={date || undefined}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </Field>
+              </div>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Si dura varios días, pon la fecha fin. Si es un solo día, déjala vacía.
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Inicio">
                   <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
@@ -216,20 +277,93 @@ export function NewActivityPage() {
               <Field label="Link del lugar (opcional)">
                 <Input value={locationUrl} onChange={(e) => setLocationUrl(e.target.value)} placeholder="https://maps..." />
               </Field>
+
+              <Field label="Repetición">
+                <Select
+                  value={recurrenceType}
+                  onValueChange={(v) => setRecurrenceType(v as RecurrenceType)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NONE">No se repite</SelectItem>
+                    <SelectItem value="INTERVAL">Cada X días</SelectItem>
+                    <SelectItem value="WEEKLY">Días fijos de la semana</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              {recurrenceType === 'INTERVAL' && (
+                <Field label="Cada cuántos días">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={recurrenceInterval}
+                    onChange={(e) => setRecurrenceInterval(Math.max(1, Number(e.target.value) || 1))}
+                  />
+                </Field>
+              )}
+
+              {recurrenceType === 'WEEKLY' && (
+                <div className="space-y-2">
+                  <Label>Días de la semana</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { d: 0, label: 'Dom' },
+                      { d: 1, label: 'Lun' },
+                      { d: 2, label: 'Mar' },
+                      { d: 3, label: 'Mié' },
+                      { d: 4, label: 'Jue' },
+                      { d: 5, label: 'Vie' },
+                      { d: 6, label: 'Sáb' },
+                    ].map(({ d, label }) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => toggleWeekday(d)}
+                        className={cn(
+                          'h-9 min-w-11 rounded-lg border px-2.5 text-sm font-medium transition-colors',
+                          recurrenceWeekdays.includes(d)
+                            ? 'border-leaf bg-leaf/15 text-leaf-darker'
+                            : 'border-border bg-card text-muted-foreground hover:border-leaf/40',
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {recurrenceType !== 'NONE' && (
+                <Field label="Repetir hasta (opcional)">
+                  <Input
+                    type="date"
+                    value={recurrenceUntil}
+                    min={date || undefined}
+                    onChange={(e) => setRecurrenceUntil(e.target.value)}
+                  />
+                </Field>
+              )}
             </>
           )}
 
           {step === 2 && (
             <>
-              {teams.length > 0 && (
+              {selectableTeams.length > 0 && (
                 <Field label="Equipo">
-                  <Select value={teamId || 'none'} onValueChange={(v) => setTeamId(v === 'none' ? '' : v)}>
+                  <Select
+                    value={teamId || (manageAll ? 'none' : '')}
+                    onValueChange={(v) => setTeamId(v === 'none' ? '' : v)}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Sin equipo" />
+                      <SelectValue placeholder={manageAll ? 'Sin equipo' : 'Tu equipo'} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Sin equipo</SelectItem>
-                      {teams.map((t) => (
+                      {manageAll && <SelectItem value="none">Sin equipo</SelectItem>}
+                      {selectableTeams.map((t) => (
                         <SelectItem key={t.id} value={t.id}>
                           {t.name}
                         </SelectItem>
@@ -237,6 +371,11 @@ export function NewActivityPage() {
                     </SelectContent>
                   </Select>
                 </Field>
+              )}
+              {!manageAll && selectableTeams.length === 0 && (
+                <p className="text-sm text-amber-700">
+                  No perteneces a ningún equipo. Pide a un administrador que te asigne a uno.
+                </p>
               )}
               <Field label="Responsable principal">
                 <Select value={primaryResponsibleId} onValueChange={setPrimaryResponsibleId}>
@@ -456,7 +595,20 @@ export function NewActivityPage() {
           {step === 5 && (
             <div className="space-y-3 text-sm">
               <ConfirmRow label="Nombre" value={name} />
-              <ConfirmRow label="Fecha" value={`${date} ${startTime}${endTime ? `–${endTime}` : ''}`} />
+              <ConfirmRow
+                label="Fecha"
+                value={`${date}${endDate && endDate !== date ? ` → ${endDate}` : ''} · ${startTime}${endTime ? `–${endTime}` : ''}`}
+              />
+              {recurrenceType !== 'NONE' && (
+                <ConfirmRow
+                  label="Repetición"
+                  value={
+                    recurrenceType === 'INTERVAL'
+                      ? `Cada ${recurrenceInterval} día${recurrenceInterval === 1 ? '' : 's'}${recurrenceUntil ? ` hasta ${recurrenceUntil}` : ''}`
+                      : `Semanal (${recurrenceWeekdays.map((d) => ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][d]).join(', ')})${recurrenceUntil ? ` hasta ${recurrenceUntil}` : ''}`
+                  }
+                />
+              )}
               <ConfirmRow label="Lugar" value={location} />
               <ConfirmRow
                 label="Responsable"

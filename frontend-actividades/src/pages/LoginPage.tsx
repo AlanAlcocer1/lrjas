@@ -63,6 +63,9 @@ export function LoginPage() {
           <h1 className="text-2xl font-bold text-foreground">Actividades</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Ingresa con tu código de participante
+            <span className="block text-xs mt-1 opacity-80">
+              Matrimonios: código 1234 (solo lectura)
+            </span>
           </p>
         </div>
 
@@ -92,7 +95,7 @@ export function LoginPage() {
 
         <p className="text-center text-sm text-muted-foreground mt-6">
           <Link to="/public" className="text-leaf-dark hover:underline">
-            Ver agenda pública
+            Ver actividades
           </Link>
         </p>
       </motion.div>
@@ -109,7 +112,7 @@ export function LoginPage() {
             </DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground px-2">
-            Si crees que deberías entrar, pide a un admin que te asigne un rol en Actividades.
+            Si crees que deberías entrar, pídele al presidente que te meta al comité chamaco.
           </p>
           <div className="flex flex-col gap-2 pt-1">
             <Button className="w-full" onClick={() => setDeniedOpen(false)}>
@@ -117,7 +120,7 @@ export function LoginPage() {
             </Button>
             <Button variant="outline" className="w-full" asChild>
               <Link to="/public" onClick={() => setDeniedOpen(false)}>
-                Ver agenda pública
+                Ver actividades
               </Link>
             </Button>
           </div>

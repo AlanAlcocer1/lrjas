@@ -63,6 +63,12 @@ enum TaskPriority {
   HIGH
 }
 
+enum RecurrenceType {
+  NONE
+  INTERVAL
+  WEEKLY
+}
+
 model User {
   id        String   @id @default(uuid())
   username  String   @unique
@@ -307,6 +313,7 @@ model Activity {
   publicDescription   String         @map("public_description") @db.Text
   internalDescription String?        @map("internal_description") @db.Text
   date                DateTime       @db.Date
+  endDate             DateTime?      @map("end_date") @db.Date
   startTime           String         @map("start_time")
   endTime             String?        @map("end_time")
   location            String
@@ -319,6 +326,10 @@ model Activity {
   approvalStatus      ApprovalStatus @default(PENDING) @map("approval_status")
   requiresBudget      Boolean        @default(false) @map("requires_budget")
   internalNotes       String?        @map("internal_notes") @db.Text
+  recurrenceType      RecurrenceType @default(NONE) @map("recurrence_type")
+  recurrenceInterval  Int?           @map("recurrence_interval")
+  recurrenceWeekdays  Int[]          @default([]) @map("recurrence_weekdays")
+  recurrenceUntil     DateTime?      @map("recurrence_until") @db.Date
   createdById         String         @map("created_by_id")
   createdBy           Participant    @relation("ActivityCreator", fields: [createdById], references: [id])
   approvedById        String?        @map("approved_by_id")

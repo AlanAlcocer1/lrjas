@@ -28,9 +28,9 @@ export function PublicAgendaPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Próximas actividades</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Ver actividades</h1>
         <p className="text-sm text-muted-foreground">
-          Agenda pública · toca un día para ver el detalle
+          Toca un día para ver el detalle
         </p>
       </div>
 

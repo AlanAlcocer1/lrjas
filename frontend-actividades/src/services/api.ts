@@ -42,7 +42,7 @@ export const activitiesApi = {
   get: (id: string) => api.get<Activity>(`/actividades/activities/${id}`).then((r) => r.data),
   create: (data: CreateActivityPayload) =>
     api.post<Activity>('/actividades/activities', data).then((r) => r.data),
-  update: (id: string, data: Partial<CreateActivityPayload>) =>
+  update: (id: string, data: Partial<CreateActivityPayload> & { statusId?: string }) =>
     api.patch<Activity>(`/actividades/activities/${id}`, data).then((r) => r.data),
   remove: (id: string) => api.delete(`/actividades/activities/${id}`).then((r) => r.data),
   history: (id: string) =>
@@ -57,6 +57,25 @@ export const activitiesApi = {
     api
       .post<Activity>(`/actividades/activities/${id}/request-changes`, { comments })
       .then((r) => r.data),
+  resubmit: (id: string) =>
+    api.post<Activity>(`/actividades/activities/${id}/resubmit`).then((r) => r.data),
+  finalize: (id: string) =>
+    api.post<Activity>(`/actividades/activities/${id}/finalize`).then((r) => r.data),
+  cancel: (id: string) =>
+    api.post<Activity>(`/actividades/activities/${id}/cancel`).then((r) => r.data),
+  markIncomplete: (id: string) =>
+    api.post<Activity>(`/actividades/activities/${id}/mark-incomplete`).then((r) => r.data),
+  postpone: (
+    id: string,
+    data: {
+      date: string;
+      endDate?: string | null;
+      startTime: string;
+      endTime?: string | null;
+      reason?: string;
+      taskDueDates?: { taskId: string; dueDate?: string | null }[];
+    },
+  ) => api.post<Activity>(`/actividades/activities/${id}/postpone`, data).then((r) => r.data),
   createTask: (
     activityId: string,
     data: {

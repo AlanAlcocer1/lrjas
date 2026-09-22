@@ -9,7 +9,7 @@ export function PublicLayout() {
           <Logo variant="isotipo" className="h-8 w-8" />
           <div>
             <p className="text-sm font-semibold leading-tight">LRJAS Actividades</p>
-            <p className="text-[11px] text-muted-foreground">Agenda pública</p>
+            <p className="text-[11px] text-muted-foreground">Ver actividades</p>
           </div>
         </Link>
         <Link

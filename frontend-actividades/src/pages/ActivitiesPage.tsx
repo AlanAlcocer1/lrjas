@@ -74,7 +74,7 @@ export function ActivitiesPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las aprobaciones</SelectItem>
-            <SelectItem value="PENDING">Pendiente</SelectItem>
+            <SelectItem value="PENDING">En espera de aprobación</SelectItem>
             <SelectItem value="APPROVED">Aprobada</SelectItem>
             <SelectItem value="REJECTED">Rechazada</SelectItem>
             <SelectItem value="CHANGES_REQUESTED">Cambios solicitados</SelectItem>

@@ -3,26 +3,27 @@ import { Calendar, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { approvalLabel, formatDate, formatFullName } from '@/lib/utils';
-import type { Activity, ApprovalStatus, PublicActivity } from '@/types';
-
-function approvalVariant(status: ApprovalStatus) {
-  switch (status) {
-    case 'APPROVED':
-      return 'success' as const;
-    case 'REJECTED':
-      return 'destructive' as const;
-    case 'CHANGES_REQUESTED':
-      return 'warning' as const;
-    default:
-      return 'secondary' as const;
-  }
-}
+import type { Activity, PublicActivity } from '@/types';
 
 export function ActivityCard({ activity }: { activity: Activity }) {
   const primary = activity.responsibles?.find((r) => r.type === 'PRIMARY')?.participant;
   const timeLabel = activity.endTime
     ? `${activity.startTime} – ${activity.endTime}`
     : activity.startTime;
+  const dateLabel = [
+    formatDate(activity.date),
+    activity.endDate && activity.endDate.slice(0, 10) !== activity.date.slice(0, 10)
+      ? `– ${formatDate(activity.endDate)}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const recurLabel =
+    activity.recurrenceType === 'INTERVAL'
+      ? `cada ${activity.recurrenceInterval ?? 1}d`
+      : activity.recurrenceType === 'WEEKLY'
+        ? 'semanal'
+        : null;
 
   return (
     <Link to={`/actividades/${activity.id}`} className="block min-w-0">
@@ -38,10 +39,15 @@ export function ActivityCard({ activity }: { activity: Activity }) {
               )}
             </div>
             <Badge
-              variant={approvalVariant(activity.approvalStatus)}
+              variant="outline"
               className="shrink-0 max-w-[9.5rem] whitespace-normal text-center leading-tight"
+              style={
+                activity.status
+                  ? { borderColor: activity.status.color, color: activity.status.color }
+                  : undefined
+              }
             >
-              {approvalLabel(activity.approvalStatus)}
+              {activity.status?.name ?? approvalLabel(activity.approvalStatus)}
             </Badge>
           </div>
 
@@ -49,9 +55,15 @@ export function ActivityCard({ activity }: { activity: Activity }) {
             <p className="flex items-start gap-2 min-w-0">
               <Calendar className="h-3.5 w-3.5 mt-0.5 shrink-0" />
               <span className="min-w-0 break-words">
-                {formatDate(activity.date)}
+                {dateLabel}
                 <span className="text-border mx-1.5">·</span>
                 {timeLabel}
+                {recurLabel ? (
+                  <>
+                    <span className="text-border mx-1.5">·</span>
+                    {recurLabel}
+                  </>
+                ) : null}
               </span>
             </p>
             <p className="flex items-start gap-2 min-w-0">
@@ -95,6 +107,20 @@ export function PublicActivityCard({ activity }: { activity: PublicActivity }) {
   const timeLabel = activity.endTime
     ? `${activity.startTime} – ${activity.endTime}`
     : activity.startTime;
+  const dateLabel = [
+    formatDate(activity.date),
+    activity.endDate && activity.endDate.slice(0, 10) !== activity.date.slice(0, 10)
+      ? `– ${formatDate(activity.endDate)}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const recurLabel =
+    activity.recurrenceType === 'INTERVAL'
+      ? `cada ${activity.recurrenceInterval ?? 1}d`
+      : activity.recurrenceType === 'WEEKLY'
+        ? 'semanal'
+        : null;
 
   return (
     <Link to={`/public/${activity.id}`} className="block min-w-0">
@@ -106,9 +132,15 @@ export function PublicActivityCard({ activity }: { activity: PublicActivity }) {
             <p className="flex items-start gap-2 min-w-0">
               <Calendar className="h-3.5 w-3.5 mt-0.5 shrink-0" />
               <span className="min-w-0 break-words">
-                {formatDate(activity.date)}
+                {dateLabel}
                 <span className="text-border mx-1.5">·</span>
                 {timeLabel}
+                {recurLabel ? (
+                  <>
+                    <span className="text-border mx-1.5">·</span>
+                    {recurLabel}
+                  </>
+                ) : null}
               </span>
             </p>
             <p className="flex items-start gap-2 min-w-0">
@@ -128,3 +160,4 @@ export function PublicActivityCard({ activity }: { activity: PublicActivity }) {
     </Link>
   );
 }
+

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Calendar, Download, MapPin } from 'lucide-react';
+import { ArrowLeft, Calendar, Download, MapPin, Repeat } from 'lucide-react';
 import { toast } from 'sonner';
 import { activitiesApi } from '@/services/api';
 import type { PublicActivity } from '@/types';
@@ -70,9 +70,27 @@ export function PublicDetailPage() {
           <p className="text-sm whitespace-pre-wrap text-muted-foreground">{activity.publicDescription}</p>
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="h-4 w-4 text-leaf-dark" />
-            {formatDate(activity.date)} · {activity.startTime}
+            {formatDate(activity.date)}
+            {activity.endDate && activity.endDate.slice(0, 10) !== activity.date.slice(0, 10)
+              ? ` – ${formatDate(activity.endDate)}`
+              : ''}
+            {' · '}
+            {activity.startTime}
             {activity.endTime ? `–${activity.endTime}` : ''}
           </div>
+          {(activity.recurrenceType === 'INTERVAL' || activity.recurrenceType === 'WEEKLY') && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Repeat className="h-4 w-4 text-leaf-dark" />
+              {activity.recurrenceType === 'INTERVAL'
+                ? `Cada ${activity.recurrenceInterval ?? 1} día${(activity.recurrenceInterval ?? 1) === 1 ? '' : 's'}`
+                : `Semanal: ${(activity.recurrenceWeekdays ?? [])
+                    .map((d) => ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][d])
+                    .join(', ')}`}
+              {activity.recurrenceUntil
+                ? ` · hasta ${formatDate(activity.recurrenceUntil)}`
+                : ''}
+            </div>
+          )}
           <div className="flex items-center gap-2 text-sm">
             <MapPin className="h-4 w-4 text-leaf-dark" />
             {activity.locationUrl ? (

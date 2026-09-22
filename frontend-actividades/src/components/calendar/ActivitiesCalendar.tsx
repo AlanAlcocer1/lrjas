@@ -5,7 +5,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import esLocale from '@fullcalendar/core/locales/es';
 import type { DatesSetArg, EventClickArg, EventInput } from '@fullcalendar/core';
 import { Link } from 'react-router-dom';
-import { CalendarDays, CheckSquare, Clock, MapPin, X } from 'lucide-react';
+import { CalendarDays, CheckSquare, Clock, MapPin, Repeat, X } from 'lucide-react';
 import {
   Dialog,
   DialogClose,
@@ -22,12 +22,18 @@ import {
   formatFullName,
   priorityLabel,
 } from '@/lib/utils';
-import type { Activity, ActivityTask, ApprovalStatus, PublicActivity } from '@/types';
+import type { Activity, ActivityTask, PublicActivity } from '@/types';
 import { toDateKey } from '@/components/calendar/MonthCalendar';
+import {
+  activityTouchesDay,
+  exclusiveEndKey,
+  expandOccurrences,
+} from '@/lib/recurrence';
 import './activities-calendar.css';
 
 const FALLBACK_COLOR = '#84bd31';
 const TASK_FALLBACK = '#64748b';
+const CANCELLED_COLOR = '#94a3b8';
 
 type CalendarItem = Activity | PublicActivity;
 
@@ -35,17 +41,40 @@ function isAdminActivity(a: CalendarItem): a is Activity {
   return 'approvalStatus' in a;
 }
 
-function approvalVariant(status: ApprovalStatus) {
-  switch (status) {
-    case 'APPROVED':
-      return 'success' as const;
-    case 'REJECTED':
-      return 'destructive' as const;
-    case 'CHANGES_REQUESTED':
-      return 'warning' as const;
-    default:
-      return 'secondary' as const;
+function operationalStatus(a: CalendarItem): { name: string; color: string } | null {
+  if (a.status?.name) {
+    return { name: a.status.name, color: a.status.color || FALLBACK_COLOR };
   }
+  if (isAdminActivity(a)) {
+    return { name: approvalLabel(a.approvalStatus), color: FALLBACK_COLOR };
+  }
+  return null;
+}
+
+function isCancelled(a: CalendarItem) {
+  return a.status?.name === 'Cancelada';
+}
+
+function isRejected(a: CalendarItem) {
+  return a.status?.name === 'Rechazada';
+}
+
+function isPostponed(a: CalendarItem) {
+  return a.status?.name === 'Pospuesta';
+}
+
+function recurrenceHint(a: CalendarItem): string | null {
+  const type = a.recurrenceType ?? 'NONE';
+  if (type === 'INTERVAL') {
+    const n = a.recurrenceInterval ?? 1;
+    return n === 1 ? 'Cada día' : `Cada ${n} días`;
+  }
+  if (type === 'WEEKLY') {
+    const labels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const days = (a.recurrenceWeekdays ?? []).map((d) => labels[d]).join(', ');
+    return days ? `Semanal: ${days}` : 'Semanal';
+  }
+  return null;
 }
 
 type ActivitiesCalendarProps = {
@@ -69,24 +98,62 @@ export function ActivitiesCalendar({
   const [open, setOpen] = useState(false);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [monthLabel, setMonthLabel] = useState('');
+  const [viewRange, setViewRange] = useState<{ from: string; to: string } | null>(null);
 
   const showTasks = mode === 'admin' && tasks.length >= 0;
 
+  const byId = useMemo(() => {
+    const map = new Map<string, CalendarItem>();
+    for (const a of items) map.set(a.id, a);
+    return map;
+  }, [items]);
+
   const events: EventInput[] = useMemo(() => {
-    const activityEvents: EventInput[] = items.map((a) => {
-      const color = a.team?.color || FALLBACK_COLOR;
-      return {
-        id: `activity-${a.id}`,
-        title: a.name,
-        start: toDateKey(a.date),
-        allDay: true,
-        backgroundColor: color,
-        borderColor: color,
-        textColor: '#ffffff',
-        classNames: ['fc-event-activity'],
-        extendedProps: { dateKey: toDateKey(a.date), kind: 'activity' },
-      };
-    });
+    const from = viewRange?.from ?? '1970-01-01';
+    const to = viewRange?.to ?? '2100-01-01';
+    const occs = expandOccurrences(items, from, to);
+
+    const activityEvents: EventInput[] = occs
+      .map((o) => {
+        const a = byId.get(o.activityId);
+        if (!a) return null;
+        const cancelled = isCancelled(a);
+        const rejected = isRejected(a);
+        const postponed = isPostponed(a);
+        const muted = cancelled || rejected;
+        const teamColor = a.team?.color || FALLBACK_COLOR;
+        const color = cancelled
+          ? CANCELLED_COLOR
+          : rejected
+            ? '#dc2626'
+            : postponed
+              ? '#a855f7'
+              : teamColor;
+        const multi = o.startKey !== o.endKey;
+        const prefix = cancelled ? '✕ ' : rejected ? '! ' : postponed ? '⏭ ' : '';
+        return {
+          id: `activity-${a.id}-${o.startKey}`,
+          title: `${prefix}${a.name}`,
+          start: o.startKey,
+          end: multi ? exclusiveEndKey(o.endKey) : undefined,
+          allDay: true,
+          backgroundColor: color,
+          borderColor: color,
+          textColor: '#ffffff',
+          classNames: [
+            'fc-event-activity',
+            cancelled ? 'fc-event-cancelled' : '',
+            rejected ? 'fc-event-rejected' : '',
+          ].filter(Boolean),
+          extendedProps: {
+            dateKey: o.startKey,
+            kind: 'activity',
+            activityId: a.id,
+            muted,
+          },
+        } satisfies EventInput;
+      })
+      .filter(Boolean) as EventInput[];
 
     if (mode !== 'admin') return activityEvents;
 
@@ -112,7 +179,7 @@ export function ActivitiesCalendar({
       });
 
     return [...activityEvents, ...taskEvents];
-  }, [items, tasks, mode]);
+  }, [items, tasks, mode, viewRange, byId]);
 
   const legend = useMemo(() => {
     const map = new Map<string, { name: string; color: string }>();
@@ -139,7 +206,7 @@ export function ActivitiesCalendar({
   const dayActivities = useMemo(() => {
     if (!selectedKey) return [];
     return items
-      .filter((a) => toDateKey(a.date) === selectedKey)
+      .filter((a) => activityTouchesDay(a, selectedKey))
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [items, selectedKey]);
 
@@ -162,7 +229,10 @@ export function ActivitiesCalendar({
   };
 
   const onDatesSet = (arg: DatesSetArg) => {
-    onRangeChange?.(toDateKey(arg.start), toDateKey(arg.end));
+    const from = toDateKey(arg.start);
+    const to = toDateKey(arg.end);
+    setViewRange({ from, to });
+    onRangeChange?.(from, to);
     const label = arg.view.currentStart
       .toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })
       .replace(/\s+de\s+/gi, ' ');
@@ -227,6 +297,12 @@ export function ActivitiesCalendar({
             Tareas (☐)
           </span>
         )}
+        {mode === 'admin' && items.some(isCancelled) && (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-slate-400" />
+            Cancelada
+          </span>
+        )}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -280,31 +356,49 @@ export function ActivitiesCalendar({
                       </h3>
                     )}
                     {dayActivities.map((a) => {
-                      const color = a.team?.color || FALLBACK_COLOR;
+                      const cancelled = isCancelled(a);
+                      const status = operationalStatus(a);
+                      const color = cancelled
+                        ? CANCELLED_COLOR
+                        : a.team?.color || FALLBACK_COLOR;
                       const href = mode === 'public' ? `/public/${a.id}` : `/actividades/${a.id}`;
                       const timeLabel = a.endTime
                         ? `${a.startTime} – ${a.endTime}`
                         : a.startTime;
+                      const recur = recurrenceHint(a);
+                      const multi =
+                        a.endDate && toDateKey(a.endDate) !== toDateKey(a.date)
+                          ? `${formatDate(a.date)} – ${formatDate(a.endDate)}`
+                          : null;
 
                       return (
                         <Link
                           key={a.id}
                           to={href}
                           onClick={() => setOpen(false)}
-                          className="block rounded-xl border border-border bg-card overflow-hidden hover:border-leaf/40 transition-colors active:scale-[0.99]"
+                          className={cn(
+                            'block rounded-xl border border-border bg-card overflow-hidden hover:border-leaf/40 transition-colors active:scale-[0.99]',
+                            cancelled && 'opacity-70',
+                          )}
                         >
                           <div className="h-1.5 w-full" style={{ background: color }} />
                           <div className="p-3.5 space-y-2">
                             <div className="flex items-start gap-2">
-                              <h3 className="font-semibold text-sm leading-snug flex-1 min-w-0 break-words">
+                              <h3
+                                className={cn(
+                                  'font-semibold text-sm leading-snug flex-1 min-w-0 break-words',
+                                  cancelled && 'line-through text-muted-foreground',
+                                )}
+                              >
                                 {a.name}
                               </h3>
-                              {isAdminActivity(a) && (
+                              {mode === 'admin' && status && (
                                 <Badge
-                                  variant={approvalVariant(a.approvalStatus)}
-                                  className="shrink-0 max-w-[7.5rem] text-center leading-tight whitespace-normal"
+                                  variant="outline"
+                                  className="shrink-0 max-w-[8.5rem] text-center leading-tight whitespace-normal"
+                                  style={{ borderColor: status.color, color: status.color }}
                                 >
-                                  {approvalLabel(a.approvalStatus)}
+                                  {status.name}
                                 </Badge>
                               )}
                             </div>
@@ -312,7 +406,14 @@ export function ActivitiesCalendar({
                               <p className="flex items-center gap-1.5">
                                 <Clock className="h-3.5 w-3.5 shrink-0" />
                                 {timeLabel}
+                                {multi ? ` · ${multi}` : null}
                               </p>
+                              {recur && (
+                                <p className="flex items-center gap-1.5">
+                                  <Repeat className="h-3.5 w-3.5 shrink-0" />
+                                  {recur}
+                                </p>
+                              )}
                               <p className="flex items-start gap-1.5 min-w-0">
                                 <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                                 <span className="break-words">{a.location}</span>
@@ -322,7 +423,7 @@ export function ActivitiesCalendar({
                               <p className="inline-flex items-center gap-1.5 text-xs font-medium">
                                 <span
                                   className="h-2 w-2 rounded-full shrink-0"
-                                  style={{ background: color }}
+                                  style={{ background: a.team.color || FALLBACK_COLOR }}
                                 />
                                 {a.team.name}
                               </p>
@@ -334,7 +435,6 @@ export function ActivitiesCalendar({
                             )}
                             {isAdminActivity(a) && (
                               <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                                {a.status && <span>Estado: {a.status.name}</span>}
                                 {a.progress && a.progress.total > 0 && (
                                   <span>
                                     Tareas {a.progress.completed}/{a.progress.total}

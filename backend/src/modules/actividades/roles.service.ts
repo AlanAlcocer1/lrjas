@@ -6,6 +6,9 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAccessRoleDto, UpdateAccessRoleDto } from './dto/role.dto';
 import { PERMISSION_GROUPS } from './permissions.catalog';
+import { SYSTEM_ROLE } from '../../bootstrap/ensure-default-access-roles';
+
+const SYSTEM_ROLE_NAMES = new Set(Object.values(SYSTEM_ROLE));
 
 @Injectable()
 export class RolesService {
@@ -147,6 +150,9 @@ export class RolesService {
 
   async remove(id: string) {
     const role = await this.findOne(id);
+    if (SYSTEM_ROLE_NAMES.has(role.name as (typeof SYSTEM_ROLE)[keyof typeof SYSTEM_ROLE])) {
+      throw new BadRequestException('No se pueden eliminar los roles de sistema del comité');
+    }
     if (role.userCount > 0) {
       throw new BadRequestException(
         'No se puede eliminar un rol con usuarios asignados. Desasígnalos o desactiva el rol.',

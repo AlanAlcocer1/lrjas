@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CodeLoginDto } from './dto/code-login.dto';
 import { ActividadesUser } from './guards/permissions.guard';
+import { MATRIMONIOS_ACCESS_CODE } from '../../bootstrap/ensure-matrimonios-guest';
 
 function displayName(p: {
   firstName: string;
@@ -21,7 +22,11 @@ export class ActividadesAuthService {
   ) {}
 
   async loginByCode(dto: CodeLoginDto) {
-    const code = dto.code.trim().padStart(3, '0');
+    const raw = dto.code.trim();
+    // Matrimonios: código fijo 1234 (no pad a 3 dígitos)
+    const code =
+      raw === MATRIMONIOS_ACCESS_CODE ? MATRIMONIOS_ACCESS_CODE : raw.padStart(3, '0');
+
     const participant = await this.prisma.participant.findUnique({
       where: { code },
       include: {
@@ -34,6 +39,7 @@ export class ActividadesAuthService {
             },
           },
         },
+        teamMemberships: { select: { teamId: true } },
       },
     });
 
@@ -58,6 +64,7 @@ export class ActividadesAuthService {
 
     const permissions = Array.from(permissionSet).sort();
     const roles = activeRoles.map((r) => ({ id: r.id, name: r.name }));
+    const teamIds = participant.teamMemberships.map((tm) => tm.teamId);
     const name = displayName(participant);
 
     const accessToken = this.jwtService.sign({
@@ -74,7 +81,8 @@ export class ActividadesAuthService {
         name,
         roles,
         permissions,
-      },
+        teamIds,
+      } satisfies ActividadesUser,
     };
   }
 
@@ -91,6 +99,7 @@ export class ActividadesAuthService {
             },
           },
         },
+        teamMemberships: { select: { teamId: true } },
       },
     });
 
@@ -115,6 +124,7 @@ export class ActividadesAuthService {
       name: displayName(participant),
       permissions: Array.from(permissionSet).sort(),
       roles: activeRoles.map((r) => ({ id: r.id, name: r.name })),
+      teamIds: participant.teamMemberships.map((tm) => tm.teamId),
     };
   }
 

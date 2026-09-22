@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pencil, Plus, UsersRound } from 'lucide-react';
+import { Pencil, Plus, Trash2, UsersRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { teamsApi, usersApi } from '@/services/api';
 import type { ActividadesUserRow, Team } from '@/types';
@@ -32,7 +32,7 @@ const COLOR_PRESETS = [
 ];
 
 export function TeamsPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, refreshUser } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<ActividadesUserRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +55,7 @@ export function TeamsPage() {
 
   useEffect(() => {
     load();
-    if (hasPermission('users.view')) {
+    if (hasPermission('users.view') || hasPermission('users.assign')) {
       usersApi.search().then(setUsers).catch(() => []);
     }
   }, [hasPermission]);
@@ -127,6 +127,18 @@ export function TeamsPage() {
       toast.success('Miembros actualizados');
       setMembersOpen(null);
       load();
+      await refreshUser();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  };
+
+  const removeTeam = async (team: Team) => {
+    if (!window.confirm(`¿Eliminar el equipo "${team.name}"?`)) return;
+    try {
+      await teamsApi.remove(team.id);
+      toast.success('Equipo eliminado');
+      load();
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
@@ -182,6 +194,17 @@ export function TeamsPage() {
                   {hasPermission('teams.manage_members') && (
                     <Button size="sm" variant="outline" onClick={() => openMembers(team)}>
                       Miembros
+                    </Button>
+                  )}
+                  {hasPermission('teams.delete') && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => removeTeam(team)}
+                      aria-label={`Eliminar ${team.name}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   )}
                 </div>

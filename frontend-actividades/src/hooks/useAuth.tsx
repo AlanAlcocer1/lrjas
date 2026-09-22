@@ -8,6 +8,8 @@ interface AuthContextType {
   loading: boolean;
   login: (code: string) => Promise<void>;
   logout: () => void;
+  /** Recarga permisos y equipos desde el servidor (p. ej. tras unirte a un equipo). */
+  refreshUser: () => Promise<ActividadesUser | null>;
   isAuthenticated: boolean;
   hasPermission: (key: string) => boolean;
   hasAnyPermission: (...keys: string[]) => boolean;
@@ -19,18 +21,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<ActividadesUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const refreshUser = useCallback(async () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      setUser(null);
+      return null;
+    }
+    try {
+      const me = await authApi.me();
+      setUser(me);
+      return me;
+    } catch {
+      localStorage.removeItem(TOKEN_KEY);
+      setUser(null);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
-      authApi
-        .me()
-        .then(setUser)
-        .catch(() => localStorage.removeItem(TOKEN_KEY))
-        .finally(() => setLoading(false));
+      refreshUser().finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
-  }, []);
+  }, [refreshUser]);
 
   const login = useCallback(async (code: string) => {
     const res = await authApi.login(code);
@@ -60,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         login,
         logout,
+        refreshUser,
         isAuthenticated: !!user,
         hasPermission,
         hasAnyPermission,

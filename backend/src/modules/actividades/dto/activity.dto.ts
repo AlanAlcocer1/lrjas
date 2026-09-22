@@ -8,13 +8,20 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
   Min,
   MinLength,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApprovalStatus, ResponsibleType, TaskPriority, TaskStatus } from '@prisma/client';
+import {
+  ApprovalStatus,
+  RecurrenceType,
+  ResponsibleType,
+  TaskPriority,
+  TaskStatus,
+} from '@prisma/client';
 
 export class BudgetItemDto {
   @IsString()
@@ -111,6 +118,11 @@ export class CreateActivityDto {
   @IsDateString()
   date: string;
 
+  /** Último día inclusive si dura varios días */
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+
   @IsString()
   @MaxLength(10)
   startTime: string;
@@ -167,6 +179,29 @@ export class CreateActivityDto {
   @IsOptional()
   @IsString()
   internalNotes?: string;
+
+  @IsOptional()
+  @IsEnum(RecurrenceType)
+  recurrenceType?: RecurrenceType;
+
+  /** Cada N días (recurrenceType = INTERVAL) */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  recurrenceInterval?: number;
+
+  /** Días de la semana 0=dom … 6=sáb (recurrenceType = WEEKLY) */
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(6, { each: true })
+  recurrenceWeekdays?: number[];
+
+  @IsOptional()
+  @IsDateString()
+  recurrenceUntil?: string;
 }
 
 export class UpdateActivityDto {
@@ -188,6 +223,10 @@ export class UpdateActivityDto {
   @IsOptional()
   @IsDateString()
   date?: string;
+
+  @IsOptional()
+  @IsDateString()
+  endDate?: string | null;
 
   @IsOptional()
   @IsString()
@@ -242,6 +281,27 @@ export class UpdateActivityDto {
   @IsOptional()
   @IsString()
   internalNotes?: string;
+
+  @IsOptional()
+  @IsEnum(RecurrenceType)
+  recurrenceType?: RecurrenceType;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  recurrenceInterval?: number | null;
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(6, { each: true })
+  recurrenceWeekdays?: number[];
+
+  @IsOptional()
+  @IsDateString()
+  recurrenceUntil?: string | null;
 }
 
 export class CreateTaskDto {
@@ -411,4 +471,43 @@ export class ActivityQueryDto {
   @IsBoolean()
   @Type(() => Boolean)
   requiresBudget?: boolean;
+}
+
+export class PostponeTaskDueDto {
+  @IsUUID()
+  taskId: string;
+
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string | null;
+}
+
+export class PostponeActivityDto {
+  @IsDateString()
+  date: string;
+
+  @IsOptional()
+  @IsDateString()
+  endDate?: string | null;
+
+  @IsString()
+  @MaxLength(10)
+  startTime: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  endTime?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
+
+  /** Nuevas fechas de tareas (si no se envían, se desplazan con el mismo delta de días). */
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PostponeTaskDueDto)
+  taskDueDates?: PostponeTaskDueDto[];
 }

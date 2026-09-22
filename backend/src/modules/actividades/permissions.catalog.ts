@@ -12,6 +12,11 @@ export const ACTIVIDADES_PERMISSIONS: PermissionDef[] = [
   { key: 'activities.edit', name: 'Editar actividades', groupKey: 'activities' },
   { key: 'activities.delete', name: 'Eliminar actividades', groupKey: 'activities' },
   { key: 'activities.approve', name: 'Aprobar actividades', groupKey: 'activities' },
+  {
+    key: 'activities.manage_all',
+    name: 'Gestionar actividades de cualquier equipo',
+    groupKey: 'activities',
+  },
 
   { key: 'tasks.view', name: 'Ver tareas', groupKey: 'tasks' },
   { key: 'tasks.create', name: 'Crear tareas', groupKey: 'tasks' },
@@ -37,6 +42,7 @@ export const ACTIVIDADES_PERMISSIONS: PermissionDef[] = [
   { key: 'teams.manage_members', name: 'Gestionar miembros', groupKey: 'teams' },
 
   { key: 'users.view', name: 'Ver usuarios', groupKey: 'users' },
+  { key: 'users.assign', name: 'Asignar personas a actividades/tareas', groupKey: 'users' },
   { key: 'users.assign_roles', name: 'Asignar roles', groupKey: 'users' },
 
   { key: 'roles.view', name: 'Ver roles', groupKey: 'roles' },

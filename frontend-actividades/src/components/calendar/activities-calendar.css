@@ -141,6 +141,16 @@
   min-height: 4.5rem;
 }
 
+.fc-lrjas .fc-event-cancelled {
+  opacity: 0.72 !important;
+  text-decoration: line-through !important;
+  filter: grayscale(0.35);
+}
+
+.fc-lrjas .fc-event-rejected {
+  opacity: 0.85 !important;
+}
+
 @media (min-width: 640px) {
   .fc-lrjas > .fc-custom-month-title {
     top: 1.35rem;

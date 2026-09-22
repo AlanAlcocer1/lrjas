@@ -2,6 +2,7 @@ export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQU
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 export type ResponsibleType = 'PRIMARY' | 'SECONDARY';
+export type RecurrenceType = 'NONE' | 'INTERVAL' | 'WEEKLY';
 
 export interface ActividadesUser {
   id: string;
@@ -9,6 +10,8 @@ export interface ActividadesUser {
   name: string;
   roles: { id: string; name: string }[];
   permissions: string[];
+  /** Equipos del usuario (restricción create/edit). */
+  teamIds?: string[];
 }
 
 export interface AuthResponse {
@@ -82,6 +85,7 @@ export interface ActivityTask {
     name: string;
     date?: string;
     approvalStatus?: ApprovalStatus;
+    status?: { id: string; name: string; color?: string } | null;
     team?: { id: string; name: string; color?: string } | null;
   };
 }
@@ -111,6 +115,7 @@ export interface Activity {
   publicDescription: string;
   internalDescription?: string | null;
   date: string;
+  endDate?: string | null;
   startTime: string;
   endTime?: string | null;
   location: string;
@@ -123,6 +128,10 @@ export interface Activity {
   approvalStatus: ApprovalStatus;
   requiresBudget: boolean;
   internalNotes?: string | null;
+  recurrenceType?: RecurrenceType;
+  recurrenceInterval?: number | null;
+  recurrenceWeekdays?: number[];
+  recurrenceUntil?: string | null;
   createdById: string;
   createdBy?: ParticipantBrief;
   approvedBy?: ParticipantBrief | null;
@@ -142,11 +151,16 @@ export interface PublicActivity {
   slug?: string | null;
   publicDescription: string;
   date: string;
+  endDate?: string | null;
   startTime: string;
   endTime?: string | null;
   location: string;
   locationUrl?: string | null;
   coverImageUrl?: string | null;
+  recurrenceType?: RecurrenceType;
+  recurrenceInterval?: number | null;
+  recurrenceWeekdays?: number[];
+  recurrenceUntil?: string | null;
   team?: { id: string; name: string; color?: string } | null;
 }
 
@@ -169,6 +183,11 @@ export interface DashboardData {
     overdueTasks: number;
   };
   myTasks: ActivityTask[];
+  board?: {
+    statuses: { id: string; name: string; color: string; position: number }[];
+    activities: Activity[];
+    tasks: ActivityTask[];
+  };
   byTeam: { teamId: string | null; teamName: string; count: number }[];
   budgets: { requested: number; approved: number; spent: number };
 }
@@ -206,6 +225,7 @@ export interface CreateActivityPayload {
   publicDescription: string;
   internalDescription?: string;
   date: string;
+  endDate?: string;
   startTime: string;
   endTime?: string;
   location: string;
@@ -229,6 +249,10 @@ export interface CreateActivityPayload {
     priority?: TaskPriority;
   }[];
   internalNotes?: string;
+  recurrenceType?: RecurrenceType;
+  recurrenceInterval?: number;
+  recurrenceWeekdays?: number[];
+  recurrenceUntil?: string;
 }
 
 export interface ActivityQuery {

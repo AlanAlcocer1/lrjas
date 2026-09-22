@@ -12,6 +12,7 @@ import { AssignRolesDto } from './dto/role.dto';
 import {
   ParticipantJwtAuthGuard,
   PermissionsGuard,
+  RequireAnyPermissions,
   RequirePermissions,
 } from './guards/permissions.guard';
 
@@ -21,19 +22,19 @@ export class ActividadesUsersController {
   constructor(private usersService: ActividadesUsersService) {}
 
   @Get()
-  @RequirePermissions('users.view')
+  @RequireAnyPermissions('users.view', 'users.assign')
   search(@Query('q') q?: string) {
     return this.usersService.search(q);
   }
 
   @Get('code/:code')
-  @RequirePermissions('users.view')
+  @RequireAnyPermissions('users.view', 'users.assign')
   findByCode(@Param('code') code: string) {
     return this.usersService.findByCode(code);
   }
 
   @Get(':id')
-  @RequirePermissions('users.view')
+  @RequireAnyPermissions('users.view', 'users.assign')
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }
