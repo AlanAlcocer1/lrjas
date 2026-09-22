@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_URL, TOKEN_KEY } from '@/config/api';
+import { API_URL, PUBLIC_API_URL, TOKEN_KEY } from '@/config/api';
 import type {
   AccessRole,
   ActividadesUser,
@@ -27,7 +27,8 @@ const api = axios.create({
 
 /** Absolute URL for ICS links (Google/Apple need full https://...). */
 function absoluteApiPath(path: string) {
-  const joined = `${API_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
+  const base = (PUBLIC_API_URL || API_URL).replace(/\/$/, '');
+  const joined = `${base}/${path.replace(/^\//, '')}`;
   if (/^https?:\/\//i.test(joined)) return joined;
   if (typeof window !== 'undefined') {
     return new URL(joined, window.location.origin).href;

@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  Header,
   NotFoundException,
   Param,
   Patch,
@@ -55,26 +54,29 @@ export class ActivitiesController {
   }
 
   @Get('calendar/public.ics')
-  @Header('Content-Type', 'text/calendar; charset=utf-8')
-  @Header('Content-Disposition', 'inline; filename="lrjas-actividades.ics"')
   async publicIcs(@Res() res: Response) {
     const baseUrl =
       process.env.ACTIVIDADES_PUBLIC_URL || 'https://actividades.lrjasmerida.me';
     const body = await this.icsService.publicFeed(baseUrl);
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'inline; filename="lrjas-actividades.ics"');
+    res.setHeader('Cache-Control', 'no-cache, max-age=0');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(body);
   }
 
   @Get('public/activities/:id/event.ics')
-  @Header('Content-Type', 'text/calendar; charset=utf-8')
   async singleIcs(@Param('id') id: string, @Res() res: Response) {
     const baseUrl =
       process.env.ACTIVIDADES_PUBLIC_URL || 'https://actividades.lrjasmerida.me';
     const body = await this.icsService.singleEventIcs(id, baseUrl);
     if (!body) throw new NotFoundException('Actividad no encontrada');
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader(
       'Content-Disposition',
       `attachment; filename="actividad-${id}.ics"`,
     );
+    res.setHeader('Cache-Control', 'no-cache, max-age=0');
     res.send(body);
   }
 

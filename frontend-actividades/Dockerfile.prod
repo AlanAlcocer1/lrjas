@@ -8,8 +8,10 @@ COPY . .
 
 ARG VITE_API_URL=/api
 ARG VITE_BASE_PATH=/
+ARG VITE_PUBLIC_API_URL=https://lrjasmerida.me/api
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_BASE_PATH=$VITE_BASE_PATH
+ENV VITE_PUBLIC_API_URL=$VITE_PUBLIC_API_URL
 
 RUN npm run build && cp dist/index.html dist/404.html
 
