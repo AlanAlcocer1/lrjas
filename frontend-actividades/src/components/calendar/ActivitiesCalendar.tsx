@@ -42,7 +42,7 @@ function isAdminActivity(a: CalendarItem): a is Activity {
 }
 
 function operationalStatus(a: CalendarItem): { name: string; color: string } | null {
-  if (a.status?.name) {
+  if (isAdminActivity(a) && a.status?.name) {
     return { name: a.status.name, color: a.status.color || FALLBACK_COLOR };
   }
   if (isAdminActivity(a)) {
@@ -52,15 +52,15 @@ function operationalStatus(a: CalendarItem): { name: string; color: string } | n
 }
 
 function isCancelled(a: CalendarItem) {
-  return a.status?.name === 'Cancelada';
+  return isAdminActivity(a) && a.status?.name === 'Cancelada';
 }
 
 function isRejected(a: CalendarItem) {
-  return a.status?.name === 'Rechazada';
+  return isAdminActivity(a) && a.status?.name === 'Rechazada';
 }
 
 function isPostponed(a: CalendarItem) {
-  return a.status?.name === 'Pospuesta';
+  return isAdminActivity(a) && a.status?.name === 'Pospuesta';
 }
 
 function recurrenceHint(a: CalendarItem): string | null {
