@@ -39,6 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/hooks/useAuth';
 import {
   approvalLabel,
@@ -94,6 +95,8 @@ export function ActivityDetailPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [taskOpen, setTaskOpen] = useState(false);
   const [newTask, setNewTask] = useState({ name: '', assigneeId: '', dueDate: '', priority: 'MEDIUM' as TaskPriority });
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
 
   const budgetTotal = useMemo(
     () => budgetItems.reduce((sum, i) => sum + Number(i.quantity || 0) * Number(i.unitPrice || 0), 0),
@@ -198,15 +201,13 @@ export function ActivityDetailPage() {
 
   const removeActivity = async () => {
     if (!id || !activity) return;
-    if (!window.confirm(`¿Eliminar permanentemente "${activity.name}"? Esta acción no se puede deshacer.`)) {
-      return;
-    }
     try {
       await activitiesApi.remove(id);
       toast.success('Actividad eliminada');
       navigate('/app/actividades');
     } catch (err) {
       toast.error(getErrorMessage(err));
+      throw err;
     }
   };
 
@@ -491,11 +492,7 @@ export function ActivityDetailPage() {
                         variant="outline"
                         className="text-destructive hover:text-destructive"
                         disabled={statusSaving}
-                        onClick={() => {
-                          if (window.confirm('¿Cancelar esta actividad?')) {
-                            runStatusAction('cancel');
-                          }
-                        }}
+                        onClick={() => setConfirmCancelOpen(true)}
                       >
                         Cancelar actividad
                       </Button>
@@ -505,7 +502,7 @@ export function ActivityDetailPage() {
                       size="sm"
                       variant="outline"
                       className="text-destructive hover:text-destructive"
-                      onClick={removeActivity}
+                      onClick={() => setConfirmDeleteOpen(true)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Eliminar
@@ -1012,6 +1009,30 @@ export function ActivityDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Eliminar actividad"
+        description={
+          activity
+            ? `¿Eliminar permanentemente "${activity.name}"? Esta acción no se puede deshacer.`
+            : 'Esta acción no se puede deshacer.'
+        }
+        confirmLabel="Eliminar"
+        onConfirm={removeActivity}
+      />
+
+      <ConfirmDialog
+        open={confirmCancelOpen}
+        onOpenChange={setConfirmCancelOpen}
+        title="Cancelar actividad"
+        description="La actividad quedará cancelada y ya no aparecerá como activa."
+        confirmLabel="Sí, cancelar"
+        onConfirm={async () => {
+          await runStatusAction('cancel');
+        }}
+      />
     </div>
   );
 }

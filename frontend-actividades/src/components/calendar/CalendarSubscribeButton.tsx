@@ -17,9 +17,9 @@ function toWebcal(httpsUrl: string) {
 }
 
 function googleSubscribeUrl(icsHttpsUrl: string) {
-  // Google acepta cid= con URL https o webcal
-  const cid = encodeURIComponent(icsHttpsUrl);
-  return `https://calendar.google.com/calendar/r?cid=${cid}`;
+  // Google suele fallar con cid=https://…; webcal:// funciona mejor
+  const webcal = icsHttpsUrl.replace(/^https?:\/\//i, 'webcal://');
+  return `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}`;
 }
 
 type CalendarSubscribeButtonProps = {
@@ -105,7 +105,8 @@ export function CalendarSubscribeButton({
               <ul className="text-xs text-muted-foreground space-y-1.5 pt-1 list-disc pl-4">
                 <li>
                   <strong className="font-medium text-foreground">Google:</strong> Otros
-                  calendarios → Desde URL → pega el enlace.
+                  calendarios → Desde URL → pega el enlace https. Hace falta al menos una
+                  actividad aprobada. Google tarda horas en refrescar (no es al instante).
                 </li>
                 <li>
                   <strong className="font-medium text-foreground">iPhone:</strong> Ajustes →

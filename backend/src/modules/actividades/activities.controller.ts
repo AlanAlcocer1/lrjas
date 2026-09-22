@@ -59,8 +59,7 @@ export class ActivitiesController {
       process.env.ACTIVIDADES_PUBLIC_URL || 'https://actividades.lrjasmerida.me';
     const body = await this.icsService.publicFeed(baseUrl);
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
-    res.setHeader('Content-Disposition', 'inline; filename="lrjas-actividades.ics"');
-    res.setHeader('Cache-Control', 'no-cache, max-age=0');
+    res.setHeader('Cache-Control', 'public, max-age=300');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(body);
   }

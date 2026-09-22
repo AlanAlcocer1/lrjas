@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Select,
   SelectContent,
@@ -44,6 +45,7 @@ export default function SocialPostsPage() {
   const [editing, setEditing] = useState<SocialPost | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [postToDelete, setPostToDelete] = useState<SocialPost | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -107,14 +109,15 @@ export default function SocialPostsPage() {
     }
   };
 
-  const handleDelete = async (post: SocialPost) => {
-    if (!confirm(`¿Eliminar "${post.title}"?`)) return;
+  const handleDelete = async () => {
+    if (!postToDelete) return;
     try {
-      await socialApi.remove(post.id);
+      await socialApi.remove(postToDelete.id);
       toast.success('Publicación eliminada');
       load();
     } catch {
       toast.error('No se pudo eliminar');
+      throw new Error('delete failed');
     }
   };
 
@@ -197,7 +200,7 @@ export default function SocialPostsPage() {
                             <Button variant="ghost" size="icon" onClick={() => openEdit(post)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(post)}>
+                            <Button variant="ghost" size="icon" onClick={() => setPostToDelete(post)}>
                               <Trash2 className="h-4 w-4 text-red-400" />
                             </Button>
                           </div>
@@ -296,6 +299,18 @@ export default function SocialPostsPage() {
             </Button>
           </DialogContent>
         </Dialog>
+        <ConfirmDialog
+          open={!!postToDelete}
+          onOpenChange={(open) => {
+            if (!open) setPostToDelete(null);
+          }}
+          title="Eliminar publicación"
+          description={
+            postToDelete ? `¿Eliminar "${postToDelete.title}"?` : undefined
+          }
+          confirmLabel="Eliminar"
+          onConfirm={handleDelete}
+        />
       </PageTransition>
     </AdminLayout>
   );

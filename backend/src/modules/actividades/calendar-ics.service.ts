@@ -3,17 +3,40 @@ import { ApprovalStatus, RecurrenceType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ACTIVITY_STATUS } from './activity-status.catalog';
 
+const TZID = 'America/Merida';
+
+/** América/Mérida no usa horario de verano (CST = UTC-6). */
+const VTIMEZONE_MERIDA = [
+  'BEGIN:VTIMEZONE',
+  `TZID:${TZID}`,
+  `X-LIC-LOCATION:${TZID}`,
+  'BEGIN:STANDARD',
+  'TZOFFSETFROM:-0600',
+  'TZOFFSETTO:-0600',
+  'TZNAME:CST',
+  'DTSTART:19700101T000000',
+  'END:STANDARD',
+  'END:VTIMEZONE',
+].join('\r\n');
+
 function pad(n: number) {
   return String(n).padStart(2, '0');
 }
 
-/** Fecha/hora México (America/Merida) a UTC ICS sin zona (floating local) o Z. */
-function toIcsDateTime(date: Date, time: string) {
-  const [hh = '00', mm = '00'] = time.split(':');
+/** Fecha (día en UTC de Prisma) + hora local Mérida → instante UTC ICS (…Z).
+ * Mérida = UTC-6 todo el año. Google acepta mejor UTC que TZID. */
+function toIcsUtcDateTime(date: Date, time: string) {
+  const [hh = 0, mm = 0] = time.split(':').map((x) => Number(x) || 0);
   const y = date.getUTCFullYear();
-  const m = pad(date.getUTCMonth() + 1);
-  const d = pad(date.getUTCDate());
-  return `${y}${m}${d}T${hh.padStart(2, '0')}${mm.padStart(2, '0')}00`;
+  const mo = date.getUTCMonth();
+  const d = date.getUTCDate();
+  // 18:00 Mérida = 00:00 UTC del día siguiente → sumamos 6h
+  const utc = new Date(Date.UTC(y, mo, d, hh, mm, 0));
+  utc.setUTCHours(utc.getUTCHours() + 6);
+  return (
+    `${utc.getUTCFullYear()}${pad(utc.getUTCMonth() + 1)}${pad(utc.getUTCDate())}` +
+    `T${pad(utc.getUTCHours())}${pad(utc.getUTCMinutes())}${pad(utc.getUTCSeconds())}Z`
+  );
 }
 
 function toIcsDate(date: Date) {
@@ -49,6 +72,13 @@ function foldLine(line: string) {
     remaining = remaining.slice(max - 1);
   }
   return parts.join('\r\n');
+}
+
+function utcStamp(date = new Date()) {
+  return date
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}/, '');
 }
 
 const ICS_WEEKDAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'] as const;
@@ -91,6 +121,7 @@ export class CalendarIcsService {
         recurrenceInterval: a.recurrenceInterval,
         recurrenceWeekdays: a.recurrenceWeekdays,
         recurrenceUntil: a.recurrenceUntil,
+        updatedAt: a.updatedAt,
         url: `${baseUrl}/evento/${a.id}`,
       }),
     );
@@ -117,6 +148,7 @@ export class CalendarIcsService {
       recurrenceInterval: a.recurrenceInterval,
       recurrenceWeekdays: a.recurrenceWeekdays,
       recurrenceUntil: a.recurrenceUntil,
+      updatedAt: a.updatedAt,
       url: `${baseUrl}/evento/${a.id}`,
     });
 
@@ -136,27 +168,29 @@ export class CalendarIcsService {
     recurrenceInterval?: number | null;
     recurrenceWeekdays?: number[];
     recurrenceUntil?: Date | null;
+    updatedAt?: Date | null;
     url: string;
   }) {
     const multiDay = !!(input.endDate && input.endDate > input.date);
-    const stamp = new Date()
-      .toISOString()
-      .replace(/[-:]/g, '')
-      .replace(/\.\d{3}/, '');
+    const stamp = utcStamp();
+    const lastMod = utcStamp(input.updatedAt ?? new Date());
 
     const lines = [
       'BEGIN:VEVENT',
       `UID:${input.uid}`,
       `DTSTAMP:${stamp}`,
+      `LAST-MODIFIED:${lastMod}`,
+      'SEQUENCE:0',
+      'STATUS:CONFIRMED',
+      'TRANSP:OPAQUE',
     ];
 
     if (multiDay) {
-      // All-day multi-día: DTEND exclusivo
       lines.push(`DTSTART;VALUE=DATE:${toIcsDate(input.date)}`);
       lines.push(`DTEND;VALUE=DATE:${toIcsDate(addDaysUtc(input.endDate!, 1))}`);
     } else {
-      const dtStart = toIcsDateTime(input.date, input.startTime);
-      const dtEnd = toIcsDateTime(
+      const dtStart = toIcsUtcDateTime(input.date, input.startTime);
+      const dtEnd = toIcsUtcDateTime(
         input.date,
         input.endTime || this.addHour(input.startTime),
       );
@@ -169,8 +203,8 @@ export class CalendarIcsService {
 
     lines.push(
       `SUMMARY:${escapeIcs(input.name)}`,
-      `DESCRIPTION:${escapeIcs(input.description)}`,
-      `LOCATION:${escapeIcs(input.location)}`,
+      `DESCRIPTION:${escapeIcs(input.description || '')}`,
+      `LOCATION:${escapeIcs(input.location || '')}`,
       `URL:${input.url}`,
       'END:VEVENT',
     );
@@ -188,7 +222,7 @@ export class CalendarIcsService {
     }
 
     const parts: string[] = [];
-    if (input.recurrenceType === RecurrenceType.INTERVAL) {
+    if (input.recurrenceType === RecurrenceType.DAILY) {
       parts.push('FREQ=DAILY');
       parts.push(`INTERVAL=${input.recurrenceInterval ?? 1}`);
     } else if (input.recurrenceType === RecurrenceType.WEEKLY) {
@@ -202,7 +236,7 @@ export class CalendarIcsService {
     }
 
     if (input.recurrenceUntil) {
-      parts.push(`UNTIL=${toIcsDate(input.recurrenceUntil)}`);
+      parts.push(`UNTIL=${toIcsDate(input.recurrenceUntil)}T235959Z`);
     }
 
     return parts.join(';');
@@ -216,7 +250,10 @@ export class CalendarIcsService {
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
       `X-WR-CALNAME:${escapeIcs(name)}`,
-      'X-WR-TIMEZONE:America/Merida',
+      `X-WR-TIMEZONE:${TZID}`,
+      'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
+      'X-PUBLISHED-TTL:PT1H',
+      VTIMEZONE_MERIDA,
       ...events,
       'END:VCALENDAR',
     ];

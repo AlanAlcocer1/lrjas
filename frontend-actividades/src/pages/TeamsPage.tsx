@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { cn, getErrorMessage } from '@/lib/utils';
 
@@ -43,6 +44,7 @@ export function TeamsPage() {
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#84bd31');
   const [memberIds, setMemberIds] = useState<string[]>([]);
+  const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -133,14 +135,15 @@ export function TeamsPage() {
     }
   };
 
-  const removeTeam = async (team: Team) => {
-    if (!window.confirm(`¿Eliminar el equipo "${team.name}"?`)) return;
+  const removeTeam = async () => {
+    if (!teamToDelete) return;
     try {
-      await teamsApi.remove(team.id);
+      await teamsApi.remove(teamToDelete.id);
       toast.success('Equipo eliminado');
       load();
     } catch (err) {
       toast.error(getErrorMessage(err));
+      throw err;
     }
   };
 
@@ -201,7 +204,7 @@ export function TeamsPage() {
                       size="sm"
                       variant="outline"
                       className="text-destructive hover:text-destructive"
-                      onClick={() => removeTeam(team)}
+                      onClick={() => setTeamToDelete(team)}
                       aria-label={`Eliminar ${team.name}`}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -292,6 +295,21 @@ export function TeamsPage() {
           </Button>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!teamToDelete}
+        onOpenChange={(open) => {
+          if (!open) setTeamToDelete(null);
+        }}
+        title="Eliminar equipo"
+        description={
+          teamToDelete
+            ? `¿Eliminar el equipo "${teamToDelete.name}"?`
+            : undefined
+        }
+        confirmLabel="Eliminar"
+        onConfirm={removeTeam}
+      />
     </div>
   );
 }
