@@ -15,6 +15,8 @@ import { ActividadesUsersController } from './actividades-users.controller';
 import { ActivitiesService } from './activities.service';
 import { ActivitiesController } from './activities.controller';
 import { CalendarIcsService } from './calendar-ics.service';
+import { AuditService } from './audit.service';
+import { AuditController } from './audit.controller';
 
 @Module({
   imports: [
@@ -34,6 +36,7 @@ import { CalendarIcsService } from './calendar-ics.service';
     TeamsController,
     ActividadesUsersController,
     ActivitiesController,
+    AuditController,
   ],
   providers: [
     ActividadesAuthService,
@@ -44,6 +47,7 @@ import { CalendarIcsService } from './calendar-ics.service';
     ActividadesUsersService,
     ActivitiesService,
     CalendarIcsService,
+    AuditService,
   ],
   exports: [ActividadesAuthService],
 })

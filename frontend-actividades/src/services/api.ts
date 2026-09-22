@@ -16,6 +16,8 @@ import type {
   Permission,
   PublicActivity,
   Team,
+  AccessLogEntry,
+  AuditHistoryEntry,
 } from '@/types';
 
 const api = axios.create({
@@ -110,6 +112,8 @@ export const activitiesApi = {
   getPublic: (id: string) =>
     api.get<PublicActivity>(`/actividades/public/activities/${id}`).then((r) => r.data),
   eventIcsUrl: (id: string) => `${API_URL}/actividades/public/activities/${id}/event.ics`,
+  /** Feed ICS suscribible (Google / Apple / Outlook). */
+  publicCalendarIcsUrl: () => `${API_URL}/actividades/calendar/public.ics`,
 };
 
 export const teamsApi = {
@@ -155,6 +159,17 @@ export const rolesApi = {
   ) => api.patch<AccessRole>(`/actividades/roles/${id}`, data).then((r) => r.data),
   remove: (id: string) => api.delete(`/actividades/roles/${id}`).then((r) => r.data),
   listPermissions: () => api.get<Permission[]>('/actividades/permissions').then((r) => r.data),
+};
+
+export const auditApi = {
+  logins: (take = 100) =>
+    api
+      .get<AccessLogEntry[]>('/actividades/audit/logins', { params: { take } })
+      .then((r) => r.data),
+  history: (take = 100) =>
+    api
+      .get<AuditHistoryEntry[]>('/actividades/audit/history', { params: { take } })
+      .then((r) => r.data),
 };
 
 export default api;

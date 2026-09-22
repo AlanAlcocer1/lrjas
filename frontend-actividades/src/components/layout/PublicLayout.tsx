@@ -12,12 +12,6 @@ export function PublicLayout() {
             <p className="text-[11px] text-muted-foreground">Ver actividades</p>
           </div>
         </Link>
-        <Link
-          to="/login"
-          className="text-sm font-medium text-leaf-dark hover:text-leaf-darker"
-        >
-          Entrar
-        </Link>
       </header>
       <main className="flex-1 px-4 py-6 max-w-3xl w-full mx-auto min-w-0">
         <Outlet />

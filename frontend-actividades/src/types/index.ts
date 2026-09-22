@@ -174,6 +174,26 @@ export interface ActivityHistoryEntry {
   participant?: ParticipantBrief | null;
 }
 
+export interface AccessLogEntry {
+  id: string;
+  action: string;
+  code?: string | null;
+  ip?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
+  participant?: { id: string; code: string; name: string } | null;
+}
+
+export interface AuditHistoryEntry {
+  id: string;
+  action: string;
+  createdAt: string;
+  oldValue?: unknown;
+  newValue?: unknown;
+  activity?: { id: string; name: string } | null;
+  participant?: { id: string; code: string; name: string } | null;
+}
+
 export interface DashboardData {
   upcoming: Activity[];
   counts: {

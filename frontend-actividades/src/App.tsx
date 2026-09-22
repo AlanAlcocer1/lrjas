@@ -14,6 +14,7 @@ import { ApprovalsPage } from '@/pages/ApprovalsPage';
 import { TeamsPage } from '@/pages/TeamsPage';
 import { UsersPage } from '@/pages/UsersPage';
 import { SettingsPage } from '@/pages/SettingsPage';
+import { AuditPage } from '@/pages/AuditPage';
 import { PublicAgendaPage } from '@/pages/PublicAgendaPage';
 import { PublicDetailPage } from '@/pages/PublicDetailPage';
 
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="aprobaciones" element={<ApprovalsPage />} />
             <Route path="equipos" element={<TeamsPage />} />
             <Route path="usuarios" element={<UsersPage />} />
+            <Route path="historial" element={<AuditPage />} />
             <Route path="configuracion" element={<SettingsPage />} />
           </Route>
         </Route>

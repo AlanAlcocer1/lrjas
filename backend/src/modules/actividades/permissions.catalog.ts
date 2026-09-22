@@ -55,6 +55,7 @@ export const ACTIVIDADES_PERMISSIONS: PermissionDef[] = [
   { key: 'calendar.manage', name: 'Gestionar calendario', groupKey: 'calendar' },
 
   { key: 'history.view', name: 'Ver historial', groupKey: 'history' },
+  { key: 'audit.view', name: 'Ver auditoría e inicios de sesión', groupKey: 'history' },
 
   { key: 'settings.manage', name: 'Gestionar configuración', groupKey: 'settings' },
 ];

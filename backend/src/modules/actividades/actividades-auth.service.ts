@@ -1,9 +1,10 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CodeLoginDto } from './dto/code-login.dto';
 import { ActividadesUser } from './guards/permissions.guard';
-import { MATRIMONIOS_ACCESS_CODE } from '../../bootstrap/ensure-matrimonios-guest';
+import { MATRIMONIOS_ACCESS_CODE, ensureMatrimoniosGuest } from '../../bootstrap/ensure-matrimonios-guest';
 
 function displayName(p: {
   firstName: string;
@@ -14,6 +15,11 @@ function displayName(p: {
   return [p.firstName, p.middleName, p.lastName, p.motherLastName].filter(Boolean).join(' ');
 }
 
+export type LoginRequestMeta = {
+  ip?: string | null;
+  userAgent?: string | null;
+};
+
 @Injectable()
 export class ActividadesAuthService {
   constructor(
@@ -21,11 +27,16 @@ export class ActividadesAuthService {
     private jwtService: JwtService,
   ) {}
 
-  async loginByCode(dto: CodeLoginDto) {
+  async loginByCode(dto: CodeLoginDto, meta: LoginRequestMeta = {}) {
     const raw = dto.code.trim();
     // Matrimonios: código fijo 1234 (no pad a 3 dígitos)
     const code =
       raw === MATRIMONIOS_ACCESS_CODE ? MATRIMONIOS_ACCESS_CODE : raw.padStart(3, '0');
+
+    // Asegura guest + rol Matrimonios aunque el bootstrap no haya corrido
+    if (code === MATRIMONIOS_ACCESS_CODE) {
+      await ensureMatrimoniosGuest(this.prisma);
+    }
 
     const participant = await this.prisma.participant.findUnique({
       where: { code },
@@ -44,6 +55,13 @@ export class ActividadesAuthService {
     });
 
     if (!participant || !participant.active) {
+      await this.writeAccessLog({
+        action: 'login_denied',
+        code,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        metadata: { reason: 'not_found_or_inactive' },
+      });
       throw new UnauthorizedException('No tienes permisos de acceder aquí mi chavo');
     }
 
@@ -52,6 +70,14 @@ export class ActividadesAuthService {
       .filter((r) => r.active);
 
     if (activeRoles.length === 0) {
+      await this.writeAccessLog({
+        action: 'login_denied',
+        participantId: participant.id,
+        code,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        metadata: { reason: 'no_roles' },
+      });
       throw new UnauthorizedException('No tienes permisos de acceder aquí mi chavo');
     }
 
@@ -73,6 +99,15 @@ export class ActividadesAuthService {
       code: participant.code,
     });
 
+    await this.writeAccessLog({
+      action: 'login',
+      participantId: participant.id,
+      code: participant.code,
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      metadata: { roles: roles.map((r) => r.name) },
+    });
+
     return {
       accessToken,
       user: {
@@ -84,6 +119,33 @@ export class ActividadesAuthService {
         teamIds,
       } satisfies ActividadesUser,
     };
+  }
+
+  private async writeAccessLog(data: {
+    action: string;
+    participantId?: string;
+    code?: string;
+    ip?: string | null;
+    userAgent?: string | null;
+    metadata?: Record<string, unknown>;
+  }) {
+    try {
+      await this.prisma.accessLog.create({
+        data: {
+          action: data.action,
+          participantId: data.participantId,
+          code: data.code,
+          ip: data.ip ?? undefined,
+          userAgent: data.userAgent?.slice(0, 500) ?? undefined,
+          metadata:
+            data.metadata === undefined
+              ? undefined
+              : (data.metadata as Prisma.InputJsonValue),
+        },
+      });
+    } catch {
+      // No bloquear login si falla la auditoría
+    }
   }
 
   async validateParticipant(participantId: string): Promise<ActividadesUser | null> {

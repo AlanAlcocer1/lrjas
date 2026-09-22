@@ -10,6 +10,7 @@ import {
   Plus,
   Settings,
   ShieldCheck,
+  History,
   Users,
   UsersRound,
   X,
@@ -40,6 +41,7 @@ const moreNav: NavItem[] = [
   { to: '/aprobaciones', label: 'Aprobaciones', icon: ShieldCheck, anyOf: ['approvals.view', 'activities.approve'] },
   { to: '/equipos', label: 'Equipos', icon: UsersRound, permission: 'teams.view' },
   { to: '/usuarios', label: 'Usuarios', icon: Users, permission: 'users.view' },
+  { to: '/historial', label: 'Historial', icon: History, permission: 'audit.view' },
   { to: '/configuracion', label: 'Configuración', icon: Settings, anyOf: ['roles.view', 'settings.manage'] },
 ];
 

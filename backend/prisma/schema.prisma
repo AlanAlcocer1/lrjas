@@ -153,6 +153,7 @@ model Participant {
   approvalRequestsMade     ApprovalRequest[]       @relation("ApprovalRequester")
   approvalReviews          ApprovalRequest[]       @relation("ApprovalReviewer")
   activityHistoryEntries   ActivityHistory[]
+  accessLogs               AccessLog[]
   notifications            Notification[]
 
   @@map("participants")
@@ -452,6 +453,24 @@ model ActivityHistory {
 
   @@index([activityId])
   @@map("activity_history")
+}
+
+/// Auditoría de accesos al panel de actividades (inicios de sesión).
+model AccessLog {
+  id            String       @id @default(uuid())
+  participantId String?      @map("participant_id")
+  participant   Participant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
+  action        String
+  code          String?
+  ip            String?
+  userAgent     String?      @map("user_agent") @db.Text
+  metadata      Json?
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([participantId])
+  @@index([action])
+  @@map("access_logs")
 }
 
 /// Stub para notificaciones (Fase 2); no se usa en MVP.
