@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import esLocale from '@fullcalendar/core/locales/es';
 import type { DatesSetArg, EventClickArg, EventInput } from '@fullcalendar/core';
 import { Link } from 'react-router-dom';
 import { CalendarDays, CheckSquare, Clock, MapPin, Repeat, X } from 'lucide-react';
@@ -29,6 +28,7 @@ import {
   exclusiveEndKey,
   expandOccurrences,
 } from '@/lib/recurrence';
+import { calendarLocaleEs, formatMonthYearEs, WEEKDAY_SHORT_ES } from '@/components/calendar/calendar-locale-es';
 import './activities-calendar.css';
 
 const FALLBACK_COLOR = '#84bd31';
@@ -233,9 +233,7 @@ export function ActivitiesCalendar({
     const to = toDateKey(arg.end);
     setViewRange({ from, to });
     onRangeChange?.(from, to);
-    const label = arg.view.currentStart
-      .toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })
-      .replace(/\s+de\s+/gi, ' ');
+    const label = formatMonthYearEs(arg.view.currentStart);
     setMonthLabel(label);
   };
 
@@ -258,12 +256,21 @@ export function ActivitiesCalendar({
         <FullCalendar
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
-          locale={esLocale}
+          locale={calendarLocaleEs}
+          firstDay={0}
           headerToolbar={{
             left: 'prev',
             center: '',
             right: 'next',
           }}
+          buttonText={{
+            prev: 'Ant',
+            next: 'Sig',
+            today: 'Hoy',
+          }}
+          dayHeaderFormat={{ weekday: 'short' }}
+          dayHeaderContent={(arg) => WEEKDAY_SHORT_ES[arg.date.getDay()] ?? arg.text}
+          moreLinkContent={(arg) => `+${arg.num} más`}
           height="auto"
           fixedWeekCount={false}
           showNonCurrentDates
@@ -361,7 +368,6 @@ export function ActivitiesCalendar({
                       const color = cancelled
                         ? CANCELLED_COLOR
                         : a.team?.color || FALLBACK_COLOR;
-                      const href = mode === 'public' ? `/evento/${a.id}` : `/app/actividades/${a.id}`;
                       const timeLabel = a.endTime
                         ? `${a.startTime} – ${a.endTime}`
                         : a.startTime;
@@ -371,16 +377,14 @@ export function ActivitiesCalendar({
                           ? `${formatDate(a.date)} – ${formatDate(a.endDate)}`
                           : null;
 
-                      return (
-                        <Link
-                          key={a.id}
-                          to={href}
-                          onClick={() => setOpen(false)}
-                          className={cn(
-                            'block rounded-xl border border-border bg-card overflow-hidden hover:border-leaf/40 transition-colors active:scale-[0.99]',
-                            cancelled && 'opacity-70',
-                          )}
-                        >
+                      const cardClass = cn(
+                        'block rounded-xl border border-border bg-card overflow-hidden',
+                        cancelled && 'opacity-70',
+                        mode === 'admin' && 'hover:border-leaf/40 transition-colors active:scale-[0.99]',
+                      );
+
+                      const body = (
+                        <>
                           <div className="h-1.5 w-full" style={{ background: color }} />
                           <div className="p-3.5 space-y-2">
                             <div className="flex items-start gap-2">
@@ -443,6 +447,25 @@ export function ActivitiesCalendar({
                               </div>
                             )}
                           </div>
+                        </>
+                      );
+
+                      if (mode === 'public') {
+                        return (
+                          <div key={a.id} className={cardClass}>
+                            {body}
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <Link
+                          key={a.id}
+                          to={`/app/actividades/${a.id}`}
+                          onClick={() => setOpen(false)}
+                          className={cardClass}
+                        >
+                          {body}
                         </Link>
                       );
                     })}

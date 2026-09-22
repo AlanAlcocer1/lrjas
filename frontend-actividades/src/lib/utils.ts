@@ -17,22 +17,22 @@ export function formatFullName(p: {
 }
 
 export function formatDate(date: string | Date) {
+  const opts: Intl.DateTimeFormatOptions = {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  };
   if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date)) {
     const [y, m, d] = date.slice(0, 10).split('-').map(Number);
     return new Date(Date.UTC(y, m - 1, d, 12, 0, 0)).toLocaleDateString('es-MX', {
+      ...opts,
       timeZone: 'UTC',
-      weekday: 'short',
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
     });
   }
   return new Date(date).toLocaleDateString('es-MX', {
+    ...opts,
     timeZone: 'America/Mexico_City',
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
   });
 }
 
@@ -41,13 +41,13 @@ export function formatDateShort(date: string | Date) {
     const [y, m, d] = date.slice(0, 10).split('-').map(Number);
     return new Date(Date.UTC(y, m - 1, d, 12, 0, 0)).toLocaleDateString('es-MX', {
       timeZone: 'UTC',
-      day: '2-digit',
+      day: 'numeric',
       month: 'short',
     });
   }
   return new Date(date).toLocaleDateString('es-MX', {
     timeZone: 'America/Mexico_City',
-    day: '2-digit',
+    day: 'numeric',
     month: 'short',
   });
 }

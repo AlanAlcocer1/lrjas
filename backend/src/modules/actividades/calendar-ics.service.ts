@@ -222,7 +222,7 @@ export class CalendarIcsService {
     }
 
     const parts: string[] = [];
-    if (input.recurrenceType === RecurrenceType.DAILY) {
+    if (input.recurrenceType === RecurrenceType.INTERVAL) {
       parts.push('FREQ=DAILY');
       parts.push(`INTERVAL=${input.recurrenceInterval ?? 1}`);
     } else if (input.recurrenceType === RecurrenceType.WEEKLY) {

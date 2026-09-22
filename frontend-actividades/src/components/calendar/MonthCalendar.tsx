@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { MONTH_NAMES_ES } from '@/components/calendar/calendar-locale-es';
 
 const WEEKDAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -84,10 +85,7 @@ export function MonthCalendar({
 }: MonthCalendarProps) {
   const todayKey = toDateKey(new Date());
   const cells = buildCells(year, monthIndex);
-  const title = new Date(year, monthIndex, 1).toLocaleDateString('es-MX', {
-    month: 'long',
-    year: 'numeric',
-  });
+  const title = `${MONTH_NAMES_ES[monthIndex]} ${year}`;
 
   return (
     <div className={cn('rounded-2xl border border-border bg-card p-3 sm:p-4 shadow-sm', className)}>
