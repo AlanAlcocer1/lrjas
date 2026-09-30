@@ -1,8 +1,11 @@
-# Variante para Coolify (no reemplaza docker-compose.prod.yml del VPS).
-# - Sin bind de puerto 80/443 en el host (Coolify/Traefik se encarga del HTTPS).
-# - Sin container_name fijos (Coolify nombra los contenedores).
-# - Dominio público: asígnalo al servicio "web" (puerto 80).
-# Variables: mismas que .env.prod.example (FRONTEND_URL, POSTGRES_*, JWT_*, MASTER_USER_*).
+# Coolify — solo backend + PostgreSQL.
+# Frontend: Cloudflare Pages (VITE_API_URL=https://api.lrjas.onema.tech/api).
+#
+# En Coolify:
+# - Compose file: docker-compose.coolify.yml
+# - Base directory: / (raíz del repo)
+# - Dominio público solo en el servicio "backend" → puerto 3001
+# - postgres queda privado (sin ports al host)
 
 services:
   postgres:
@@ -10,7 +13,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-lrjas}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-lrjas}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -29,32 +32,20 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-lrjas}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-lrjas}?schema=public
-      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env}
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      PORT: 3001
-      FRONTEND_URL: ${FRONTEND_URL:?Define FRONTEND_URL (ej. https://lrjasmerida.me)}
+      PORT: ${PORT:-3001}
+      FRONTEND_URL: ${FRONTEND_URL:?Define FRONTEND_URL (URL del front en Cloudflare, sin barra final)}
       MASTER_USER_USERNAME: ${MASTER_USER_USERNAME:-alan}
       MASTER_USER_NAME: ${MASTER_USER_NAME:-Alan}
-      MASTER_USER_PASSWORD: ${MASTER_USER_PASSWORD:?Define MASTER_USER_PASSWORD en .env}
+      MASTER_USER_PASSWORD: ${MASTER_USER_PASSWORD:?Define MASTER_USER_PASSWORD}
+      # 1 = no ejecutar prisma db seed (recomendado tras restaurar pg_dump)
+      SKIP_DB_SEED: ${SKIP_DB_SEED:-0}
+    expose:
+      - '3001'
     depends_on:
       postgres:
         condition: service_healthy
-    networks:
-      - lrjas
-
-  web:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.prod
-      args:
-        VITE_API_URL: /api
-        VITE_BASE_PATH: /
-    restart: unless-stopped
-    # Solo interno: Coolify enruta el dominio a este puerto.
-    expose:
-      - '80'
-    depends_on:
-      - backend
     networks:
       - lrjas
 
