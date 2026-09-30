@@ -10,3 +10,6 @@ if [ "${SKIP_DB_SEED:-0}" != "1" ]; then
 fi
 
 exec node dist/main.js
+# Solo migraciones. NUNCA seed en prod (borra/repuebla y da sensación de BD nueva).
+npx prisma migrate deploy
+node dist/main.js

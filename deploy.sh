@@ -50,7 +50,9 @@ docker compose "${COMPOSE_ARGS[@]}" ps
 
 echo ""
 echo "Despliegue completado."
-echo "App: ${FRONTEND_URL:-http://localhost}"
+echo "Asistencias: ${FRONTEND_URL:-http://localhost}"
+echo "Actividades: ${ACTIVIDADES_PUBLIC_URL:-http://localhost:8081}"
+echo "Panel comité: ${ACTIVIDADES_PUBLIC_URL:-http://localhost:8081}/login"
 echo "API: ${FRONTEND_URL:-http://localhost}/api"
 echo ""
 echo "Logs: docker compose ${COMPOSE_ARGS[*]} logs -f"

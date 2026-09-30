@@ -1,0 +1,28 @@
+---
+description: LRJAS production invariants — domains, docker, bootstrap. Always apply.
+alwaysApply: true
+---
+
+# LRJAS — no negociable
+
+Antes de tocar deploy/nginx/compose/dominios/bootstrap: leer `AGENTS.md`.
+
+## Dominios (NUNCA cruzar)
+
+- `lrjasmerida.me` → **Asistencias** → contenedor `lrjas-web` → build `./frontend` → título `LRJAS — Lugar de Reunión…`
+- `actividades.lrjasmerida.me` → **Actividades** → `lrjas-web-actividades` → `./frontend-actividades` → título `LRJAS Actividades`
+- Panel: `actividades.lrjasmerida.me/login` | API: `lrjasmerida.me/api`
+
+## Proxy
+
+- Upstream solo `lrjas-web` / `lrjas-web-actividades` (container_name).
+- **Prohibido** alias nginx `web` (colisiona con eca360).
+- Host: LRJAS `HTTP_PORT=18080`, eca360 usa `8080`.
+- Arreglo: `sudo ./deploy/fix-routing.sh` (preserva eca360).
+
+## Datos
+
+- No seed en prod. Bootstrap no resetea roles/equipos/usuarios.
+- Admin: `000`. Matrimonios `1234` ≠ admin. No poner `1234` en `ACTIVIDADES_ADMIN_CODES`.
+
+Si los títulos HTTPS están al revés, es bug de routing/imágenes — no “ya está” hasta verificar contenedor + HTTPS.

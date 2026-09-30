@@ -11,6 +11,7 @@ import { UsersModule } from './modules/users/users.module';
 import { DevModule } from './modules/dev/dev.module';
 import { SocialModule } from './modules/social/social.module';
 import { EventsModule } from './modules/events/events.module';
+import { ActividadesModule } from './modules/actividades/actividades.module';
 import { BootstrapService } from './bootstrap/bootstrap.service';
 
 @Module({
@@ -27,6 +28,7 @@ import { BootstrapService } from './bootstrap/bootstrap.service';
     DevModule,
     SocialModule,
     EventsModule,
+    ActividadesModule,
   ],
   providers: [BootstrapService],
 })
