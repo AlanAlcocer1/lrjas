@@ -1,0 +1,57 @@
+# Coolify — solo backend + PostgreSQL.
+# Frontend: Cloudflare Pages (VITE_API_URL=https://api.lrjas.onema.tech/api).
+#
+# En Coolify:
+# - Compose file: docker-compose.coolify.yml
+# - Base directory: / (raíz del repo)
+# - Dominio público solo en el servicio "backend" → puerto 3001
+# - postgres queda privado (sin ports al host)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lrjas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-lrjas}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-lrjas} -d ${POSTGRES_DB:-lrjas}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - lrjas
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lrjas}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-lrjas}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      PORT: ${PORT:-3001}
+      FRONTEND_URL: ${FRONTEND_URL:?Define FRONTEND_URL (URL del front en Cloudflare, sin barra final)}
+      MASTER_USER_USERNAME: ${MASTER_USER_USERNAME:-alan}
+      MASTER_USER_NAME: ${MASTER_USER_NAME:-Alan}
+      MASTER_USER_PASSWORD: ${MASTER_USER_PASSWORD:?Define MASTER_USER_PASSWORD}
+      # 1 = no ejecutar prisma db seed (recomendado tras restaurar pg_dump)
+      SKIP_DB_SEED: ${SKIP_DB_SEED:-0}
+    expose:
+      - '3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lrjas
+
+volumes:
+  postgres_data:
+
+networks:
+  lrjas:
+    driver: bridge
