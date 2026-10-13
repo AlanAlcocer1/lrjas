@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { UserPlus, QrCode, Shield, ArrowRight, Sparkles, CalendarDays } from 'lucide-react';
+import { UserPlus, QrCode, Shield, ArrowRight, Sparkles, Ticket } from 'lucide-react';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
 import { Logo } from '@/components/brand/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ACTIVIDADES_URL, APP_DESCRIPTION } from '@/config/api';
+import { APP_DESCRIPTION } from '@/config/api';
 
 export default function HomePage() {
   return (
@@ -34,8 +34,7 @@ export default function HomePage() {
               </motion.div>
               <p className="text-muted-foreground text-sm sm:text-base max-w-md mx-auto leading-relaxed">
                 {APP_DESCRIPTION}. Regístrate una vez y accede a todas las actividades con tu código
-                personal. También puedes consultar el calendario de actividades desde el botón de
-                abajo.
+                personal.
               </p>
             </div>
           </FadeIn>
@@ -78,6 +77,26 @@ export default function HomePage() {
             </div>
           </FadeIn>
 
+          <FadeIn delay={0.2}>
+            <Link to="/boletos" className="block group">
+              <Card className="transition-all duration-300 hover:border-leaf/40 hover:shadow-md hover:shadow-leaf/10 group-hover:-translate-y-0.5">
+                <CardContent className="p-5 flex items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-leaf/10 border border-leaf/25">
+                    <Ticket className="h-5 w-5 text-leaf-dark" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-semibold mb-0.5">Mis boletos de rifa</h2>
+                    <p className="text-xs text-muted-foreground">
+                      Consulta cuántos boletos tienes y cuándo te los dieron
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-leaf-dark group-hover:translate-x-1 transition-all" />
+                </CardContent>
+              </Card>
+            </Link>
+          </FadeIn>
+
+          {/* Oculto por ahora: calendario de actividades
           <FadeIn delay={0.22}>
             <a href={ACTIVIDADES_URL} className="block group" target="_blank" rel="noreferrer">
               <Card className="transition-all duration-300 hover:border-leaf/40 hover:shadow-md hover:shadow-leaf/10 group-hover:-translate-y-0.5">
@@ -96,6 +115,7 @@ export default function HomePage() {
               </Card>
             </a>
           </FadeIn>
+          */}
 
           <FadeIn delay={0.3}>
             <div className="text-center pt-2">

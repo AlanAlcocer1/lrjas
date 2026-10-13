@@ -16,6 +16,8 @@ import StakesPage from '@/pages/admin/StakesPage';
 import DevConsolePage from '@/pages/admin/DevConsolePage';
 import SocialPostsPage from '@/pages/admin/SocialPostsPage';
 import EventsPage from '@/pages/admin/EventsPage';
+import RaffleTicketsPage from '@/pages/admin/RaffleTicketsPage';
+import RaffleLookupPage from '@/pages/RaffleLookupPage';
 
 export default function App() {
   return (
@@ -26,12 +28,14 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/register/success" element={<SuccessPage />} />
           <Route path="/credential" element={<CredentialPage />} />
+          <Route path="/boletos" element={<RaffleLookupPage />} />
           <Route path="/admin/login" element={<LoginPage />} />
           <Route path="/admin" element={<DashboardPage />} />
           <Route path="/admin/usuarios" element={<UsuariosPage />} />
           <Route path="/admin/participants" element={<UsuariosPage />} />
           <Route path="/admin/check-in" element={<CheckInPage />} />
           <Route path="/admin/attendance-today" element={<AttendanceTodayPage />} />
+          <Route path="/admin/boletos" element={<RaffleTicketsPage />} />
           <Route path="/admin/users" element={<UsersPage />} />
           <Route path="/admin/fields" element={<FieldsPage />} />
           <Route path="/admin/events" element={<EventsPage />} />

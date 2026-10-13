@@ -141,6 +141,7 @@ model Participant {
   updatedAt      DateTime                @updatedAt @map("updated_at")
   fieldValues    ParticipantFieldValue[]
   attendances    Attendance[]
+  raffleTickets  RaffleTicket[]
 
   // Actividades / RBAC
   accessRoles              ParticipantAccessRole[]
@@ -197,6 +198,19 @@ model Event {
   attendances Attendance[]
 
   @@map("events")
+}
+
+/// Boletos de rifa por asistencia. Folio consecutivo (1 → "00001").
+model RaffleTicket {
+  id            String      @id @default(uuid())
+  folio         Int         @unique @default(autoincrement())
+  participantId String      @map("participant_id")
+  participant   Participant @relation(fields: [participantId], references: [id])
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@index([participantId])
+  @@index([createdAt])
+  @@map("raffle_tickets")
 }
 
 model SocialPost {

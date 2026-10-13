@@ -211,3 +211,35 @@ export interface ParticipantCompleteness {
   };
 }
 
+export interface RaffleTicket {
+  id: string;
+  folio: number;
+  folioLabel: string;
+  createdAt: string;
+  participant: {
+    id: string;
+    code: string;
+    fullName: string;
+  };
+}
+
+export interface RaffleLookupResult {
+  participant: {
+    code: string;
+    fullName: string;
+  };
+  total: number;
+  tickets: {
+    id: string;
+    folio: number;
+    folioLabel: string;
+    createdAt: string;
+  }[];
+}
+
+export interface RaffleDrawResult {
+  totalInPool: number;
+  winnerIndex: number;
+  winner: RaffleTicket;
+}
+
