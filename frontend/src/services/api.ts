@@ -16,6 +16,9 @@ import type {
   TodayAttendanceResponse,
   SocialPost,
   EventItem,
+  RaffleDrawResult,
+  RaffleLookupResult,
+  RaffleTicket,
 } from '@/types';
 
 const api = axios.create({
@@ -145,6 +148,38 @@ export const socialApi = {
   update: (id: string, data: Partial<Omit<SocialPost, 'id' | 'createdAt' | 'updatedAt'>>) =>
     api.put<SocialPost>(`/social/posts/${id}`, data).then((r) => r.data),
   remove: (id: string) => api.delete(`/social/posts/${id}`).then((r) => r.data),
+};
+
+export const raffleApi = {
+  create: (code: string) =>
+    api.post<RaffleTicket>('/raffle-tickets', { code }).then((r) => r.data),
+  lookup: (code: string) =>
+    api.get<RaffleLookupResult>(`/raffle-tickets/lookup/${encodeURIComponent(code)}`).then((r) => r.data),
+  recent: (opts?: { limit?: number; code?: string; date?: string }) =>
+    api
+      .get<RaffleTicket[]>('/raffle-tickets/recent', {
+        params: {
+          limit: opts?.limit ?? 100,
+          ...(opts?.code ? { code: opts.code } : {}),
+          ...(opts?.date ? { date: opts.date } : {}),
+        },
+      })
+      .then((r) => r.data),
+  drawPool: (date?: string) =>
+    api
+      .get<RaffleTicket[]>('/raffle-tickets/draw-pool', {
+        params: date ? { date } : undefined,
+      })
+      .then((r) => r.data),
+  draw: (opts?: { date?: string; excludeIds?: string[] }) =>
+    api
+      .post<RaffleDrawResult>('/raffle-tickets/draw', {
+        ...(opts?.date ? { date: opts.date } : {}),
+        ...(opts?.excludeIds?.length ? { excludeIds: opts.excludeIds } : {}),
+      })
+      .then((r) => r.data),
+  remove: (id: string) =>
+    api.delete<{ ok: boolean; folioLabel: string }>(`/raffle-tickets/${id}`).then((r) => r.data),
 };
 
 
