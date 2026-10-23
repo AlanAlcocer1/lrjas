@@ -261,3 +261,16 @@ export interface WalletPassCreateResult {
   pass: WalletPassInfo;
 }
 
+export interface WalletPassAdminItem {
+  id: string;
+  serialNumber: string;
+  shareUrl: string;
+  googleSaveUrl: string | null;
+  hasApplePass: boolean;
+  createdAt: string;
+  participant: {
+    code: string;
+    fullName: string;
+  };
+}
+

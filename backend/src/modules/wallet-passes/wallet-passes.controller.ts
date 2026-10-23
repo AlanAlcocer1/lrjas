@@ -1,10 +1,45 @@
-import { Controller, Get, Param, Post, Res } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import type { Response } from 'express';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { WalletPassesService } from './wallet-passes.service';
 
 @Controller('wallet-passes')
 export class WalletPassesController {
   constructor(private walletPassesService: WalletPassesService) {}
+
+  /** Admin: listado de pases emitidos. */
+  @Get('admin')
+  @UseGuards(JwtAuthGuard)
+  listAdmin(@Query('limit') limit?: string, @Query('code') code?: string) {
+    const n = limit ? Number(limit) : 100;
+    return this.walletPassesService.listAdmin({
+      limit: Number.isFinite(n) ? n : 100,
+      code,
+    });
+  }
+
+  /** Admin: elimina (revoca remoto + borra local) para poder regenerar. */
+  @Delete('admin/:id')
+  @UseGuards(JwtAuthGuard)
+  remove(@Param('id') id: string) {
+    return this.walletPassesService.removeById(id);
+  }
+
+  /** Admin: revoca y crea de nuevo con branding actual. */
+  @Post('admin/:id/regenerate')
+  @UseGuards(JwtAuthGuard)
+  regenerate(@Param('id') id: string) {
+    return this.walletPassesService.regenerateById(id);
+  }
 
   /** Consulta si ya existe un pase para el código. */
   @Get('code/:code')
