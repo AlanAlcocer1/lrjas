@@ -148,7 +148,7 @@ export default function CredentialPage() {
                         Aún no tienes asistencias registradas
                       </p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="max-h-72 space-y-2 overflow-y-auto overscroll-contain pr-1">
                         {participant.attendances.map((a) => (
                           <div
                             key={a.id}
