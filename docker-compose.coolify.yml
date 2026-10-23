@@ -41,6 +41,12 @@ services:
       MASTER_USER_PASSWORD: ${MASTER_USER_PASSWORD:?Define MASTER_USER_PASSWORD}
       # 1 = no ejecutar prisma db seed (recomendado tras restaurar pg_dump)
       SKIP_DB_SEED: ${SKIP_DB_SEED:-0}
+      # WalletWallet (pases Apple/Google en Mi credencial)
+      WALLETWALLET_API_KEY: ${WALLETWALLET_API_KEY:-}
+      # Opcional (Pro): solo HTTPS. Si vacío, embebe assets/wallet/*.png del backend
+      WALLET_PASS_LOGO_URL: ${WALLET_PASS_LOGO_URL:-}
+      WALLET_PASS_WIDE_LOGO_URL: ${WALLET_PASS_WIDE_LOGO_URL:-}
+      WALLET_PASS_ICON_URL: ${WALLET_PASS_ICON_URL:-}
     expose:
       - '3001'
     depends_on:

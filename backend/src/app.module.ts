@@ -13,6 +13,7 @@ import { SocialModule } from './modules/social/social.module';
 import { EventsModule } from './modules/events/events.module';
 import { ActividadesModule } from './modules/actividades/actividades.module';
 import { RaffleModule } from './modules/raffle/raffle.module';
+import { WalletPassesModule } from './modules/wallet-passes/wallet-passes.module';
 import { BootstrapService } from './bootstrap/bootstrap.service';
 
 @Module({
@@ -31,6 +32,7 @@ import { BootstrapService } from './bootstrap/bootstrap.service';
     EventsModule,
     ActividadesModule,
     RaffleModule,
+    WalletPassesModule,
   ],
   providers: [BootstrapService],
 })

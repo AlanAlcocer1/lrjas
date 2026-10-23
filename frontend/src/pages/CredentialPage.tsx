@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
 import { CredentialCard } from '@/components/credential/CredentialCard';
+import { WalletPassSection } from '@/components/credential/WalletPassSection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -131,6 +132,8 @@ export default function CredentialPage() {
             {participant && (
               <div className="space-y-6">
                 <CredentialCard participant={participant} />
+
+                <WalletPassSection code={participant.code} />
 
                 <Card>
                   <CardHeader className="pb-3">

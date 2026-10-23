@@ -142,6 +142,7 @@ model Participant {
   fieldValues    ParticipantFieldValue[]
   attendances    Attendance[]
   raffleTickets  RaffleTicket[]
+  walletPass     WalletPass?
 
   // Actividades / RBAC
   accessRoles              ParticipantAccessRole[]
@@ -211,6 +212,21 @@ model RaffleTicket {
   @@index([participantId])
   @@index([createdAt])
   @@map("raffle_tickets")
+}
+
+/// Pase Apple/Google Wallet (WalletWallet API).
+model WalletPass {
+  id              String      @id @default(uuid())
+  participantId   String      @unique @map("participant_id")
+  participant     Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  serialNumber    String      @unique @map("serial_number")
+  shareUrl        String      @map("share_url")
+  googleSaveUrl   String?     @map("google_save_url")
+  applePassBase64 String?     @map("apple_pass_base64") @db.Text
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@map("wallet_passes")
 }
 
 model SocialPost {

@@ -243,3 +243,21 @@ export interface RaffleDrawResult {
   winner: RaffleTicket;
 }
 
+export interface WalletPassInfo {
+  serialNumber: string;
+  shareUrl: string;
+  googleSaveUrl: string | null;
+  hasApplePass: boolean;
+  createdAt: string;
+}
+
+export type WalletPassLookupResult =
+  | { exists: false; participantCode: string }
+  | { exists: true; participantCode: string; pass: WalletPassInfo };
+
+export interface WalletPassCreateResult {
+  created: boolean;
+  participantCode: string;
+  pass: WalletPassInfo;
+}
+

@@ -29,6 +29,8 @@ services:
       JWT_EXPIRES_IN: 7d
       PORT: 3001
       FRONTEND_URL: http://localhost:5173
+      WALLETWALLET_API_KEY: ${WALLETWALLET_API_KEY:-}
+      WALLET_PASS_LOGO_URL: ${WALLET_PASS_LOGO_URL:-}
     ports:
       - "3001:3001"
     depends_on:

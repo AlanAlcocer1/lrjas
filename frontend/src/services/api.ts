@@ -19,6 +19,8 @@ import type {
   RaffleDrawResult,
   RaffleLookupResult,
   RaffleTicket,
+  WalletPassCreateResult,
+  WalletPassLookupResult,
 } from '@/types';
 
 const api = axios.create({
@@ -182,6 +184,16 @@ export const raffleApi = {
     api.delete<{ ok: boolean; folioLabel: string }>(`/raffle-tickets/${id}`).then((r) => r.data),
 };
 
+export const walletPassesApi = {
+  get: (code: string) =>
+    api
+      .get<WalletPassLookupResult>(`/wallet-passes/code/${encodeURIComponent(code)}`)
+      .then((r) => r.data),
+  create: (code: string) =>
+    api
+      .post<WalletPassCreateResult>(`/wallet-passes/code/${encodeURIComponent(code)}`)
+      .then((r) => r.data),
+};
 
 export function getApiErrorMessage(error: unknown, fallback = 'Error inesperado'): string {
   if (!axios.isAxiosError(error)) return fallback;
