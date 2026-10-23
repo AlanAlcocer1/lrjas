@@ -19,6 +19,7 @@ import type {
   RaffleDrawResult,
   RaffleLookupResult,
   RaffleTicket,
+  WalletPassAdminItem,
   WalletPassCreateResult,
   WalletPassLookupResult,
 } from '@/types';
@@ -192,6 +193,26 @@ export const walletPassesApi = {
   create: (code: string) =>
     api
       .post<WalletPassCreateResult>(`/wallet-passes/code/${encodeURIComponent(code)}`)
+      .then((r) => r.data),
+};
+
+export const walletPassesAdminApi = {
+  list: (opts?: { limit?: number; code?: string }) =>
+    api
+      .get<WalletPassAdminItem[]>('/wallet-passes/admin', {
+        params: {
+          limit: opts?.limit ?? 200,
+          ...(opts?.code ? { code: opts.code } : {}),
+        },
+      })
+      .then((r) => r.data),
+  remove: (id: string) =>
+    api.delete<{ ok: boolean; participantCode: string }>(`/wallet-passes/admin/${id}`).then((r) => r.data),
+  regenerate: (id: string) =>
+    api
+      .post<{ ok: boolean; participantCode: string; pass: WalletPassCreateResult['pass'] }>(
+        `/wallet-passes/admin/${id}/regenerate`,
+      )
       .then((r) => r.data),
 };
 

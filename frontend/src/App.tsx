@@ -17,6 +17,7 @@ import DevConsolePage from '@/pages/admin/DevConsolePage';
 import SocialPostsPage from '@/pages/admin/SocialPostsPage';
 import EventsPage from '@/pages/admin/EventsPage';
 import RaffleTicketsPage from '@/pages/admin/RaffleTicketsPage';
+import WalletPassesPage from '@/pages/admin/WalletPassesPage';
 import RaffleLookupPage from '@/pages/RaffleLookupPage';
 
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/admin/check-in" element={<CheckInPage />} />
           <Route path="/admin/attendance-today" element={<AttendanceTodayPage />} />
           <Route path="/admin/boletos" element={<RaffleTicketsPage />} />
+          <Route path="/admin/pases" element={<WalletPassesPage />} />
           <Route path="/admin/users" element={<UsersPage />} />
           <Route path="/admin/fields" element={<FieldsPage />} />
           <Route path="/admin/events" element={<EventsPage />} />

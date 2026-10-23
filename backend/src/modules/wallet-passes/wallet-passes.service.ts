@@ -10,8 +10,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 const WALLET_API = 'https://api.walletwallet.dev/api/passes';
 
-/** Campos Pro: si el plan no los admite, se reintenta sin ellos. */
-const PRO_IMAGE_KEYS = ['color', 'logoURL', 'wideLogoURL', 'iconURL', 'locations'] as const;
+/** Imágenes / locations Pro. El `color` crema se conserva en el 1er reintento. */
+const PRO_OPTIONAL_KEYS = ['logoURL', 'wideLogoURL', 'iconURL', 'locations'] as const;
+
+/** Fondo blanco arena del front (gradient-mesh / raffle cream), no el leaf #84BD31. */
+const PASS_BG_COLOR = '#f7fbf0';
 
 type WalletWalletCreateResponse = {
   serialNumber: string;
@@ -34,6 +37,11 @@ function isWalletImageRef(value: string): boolean {
     value.startsWith('data:image/png;base64,') ||
     value.startsWith('https://')
   );
+}
+
+function normalizeCode(code: string) {
+  const trimmed = code.trim();
+  return /^\d+$/.test(trimmed) ? trimmed.padStart(3, '0') : trimmed.toUpperCase();
 }
 
 @Injectable()
@@ -117,12 +125,8 @@ export class WalletPassesService {
   }
 
   async findByCode(code: string) {
-    const normalized = /^\d+$/.test(code.trim())
-      ? code.trim().padStart(3, '0')
-      : code.trim().toUpperCase();
-
     const participant = await this.prisma.participant.findUnique({
-      where: { code: normalized },
+      where: { code: normalizeCode(code) },
       include: { walletPass: true },
     });
     if (!participant || !participant.active) {
@@ -138,13 +142,44 @@ export class WalletPassesService {
     };
   }
 
-  async getOrCreateByCode(code: string) {
-    const normalized = /^\d+$/.test(code.trim())
-      ? code.trim().padStart(3, '0')
-      : code.trim().toUpperCase();
+  async listAdmin(opts?: { limit?: number; code?: string }) {
+    const limit = Math.min(Math.max(opts?.limit ?? 100, 1), 500);
+    const code = opts?.code?.trim() ? normalizeCode(opts.code) : undefined;
 
+    const rows = await this.prisma.walletPass.findMany({
+      where: code ? { participant: { code } } : undefined,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: {
+        participant: {
+          select: {
+            code: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            motherLastName: true,
+          },
+        },
+      },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      serialNumber: row.serialNumber,
+      shareUrl: row.shareUrl,
+      googleSaveUrl: row.googleSaveUrl,
+      hasApplePass: Boolean(row.applePassBase64),
+      createdAt: row.createdAt,
+      participant: {
+        code: row.participant.code,
+        fullName: fullName(row.participant),
+      },
+    }));
+  }
+
+  async getOrCreateByCode(code: string) {
     const participant = await this.prisma.participant.findUnique({
-      where: { code: normalized },
+      where: { code: normalizeCode(code) },
       include: { walletPass: true },
     });
     if (!participant || !participant.active) {
@@ -159,12 +194,23 @@ export class WalletPassesService {
       };
     }
 
+    return this.createForParticipant(participant);
+  }
+
+  private async createForParticipant(participant: {
+    id: string;
+    code: string;
+    firstName: string;
+    middleName?: string | null;
+    lastName: string;
+    motherLastName: string;
+  }) {
     const name = fullName(participant);
     const logoURL = this.logoUrl();
     const wideLogoURL = this.wideLogoUrl();
     const iconURL = this.iconUrl();
 
-    // Fondo: crema de la web (--color-muted #f4f8ef). color es Pro; logos/locations también.
+    // colorPreset green = acentos free; `color` Pro pinta el fondo blanco arena LRJAS.
     const payload: Record<string, unknown> = {
       barcodeValue: participant.code,
       barcodeFormat: 'QR',
@@ -173,7 +219,7 @@ export class WalletPassesService {
       organizationName: 'LRJAS',
       description: `Credencial LRJAS — ${name}`,
       colorPreset: 'green',
-      color: '#f4f8ef',
+      color: PASS_BG_COLOR,
       credentials: 'platform',
       sharingProhibited: true,
       notification: ' ',
@@ -195,7 +241,6 @@ export class WalletPassesService {
           value: name,
         },
       ],
-      // Lock-screen near venue (Pro en Pass Anatomy; se quita en reintento free).
       locations: [
         {
           latitude: 20.979415268208065,
@@ -211,10 +256,17 @@ export class WalletPassesService {
 
     let data = await this.createRemotePass(payload, true);
 
+    // 1er reintento: quitar logos/locations, conservar fondo crema.
     if (!data) {
-      for (const key of PRO_IMAGE_KEYS) {
+      for (const key of PRO_OPTIONAL_KEYS) {
         delete payload[key];
       }
+      data = await this.createRemotePass(payload, true);
+    }
+
+    // 2º: sin color custom (queda colorPreset green — solo si Pro falla del todo).
+    if (!data) {
+      delete payload.color;
       data = await this.createRemotePass(payload, false);
     }
 
@@ -236,6 +288,73 @@ export class WalletPassesService {
       created: true as const,
       participantCode: participant.code,
       pass: this.mapPass(saved),
+    };
+  }
+
+  private async revokeRemote(serialNumber: string) {
+    try {
+      const res = await fetch(`${WALLET_API}/${encodeURIComponent(serialNumber)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${this.apiKey()}` },
+      });
+      if (!res.ok && res.status !== 404) {
+        const text = await res.text().catch(() => '');
+        console.warn('WalletWallet revoke failed:', res.status, text.slice(0, 200));
+      }
+    } catch (err) {
+      console.warn('WalletWallet revoke error:', err);
+    }
+  }
+
+  /** Elimina el pase local y lo invalida en WalletWallet. */
+  async removeById(id: string) {
+    const row = await this.prisma.walletPass.findUnique({
+      where: { id },
+      include: {
+        participant: {
+          select: {
+            code: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            motherLastName: true,
+          },
+        },
+      },
+    });
+    if (!row) throw new NotFoundException('Pase no encontrado');
+
+    await this.revokeRemote(row.serialNumber);
+    await this.prisma.walletPass.delete({ where: { id: row.id } });
+
+    return {
+      ok: true as const,
+      id: row.id,
+      serialNumber: row.serialNumber,
+      participantCode: row.participant.code,
+      fullName: fullName(row.participant),
+    };
+  }
+
+  /** Revoca el pase actual y emite uno nuevo con el branding vigente. */
+  async regenerateById(id: string) {
+    const row = await this.prisma.walletPass.findUnique({
+      where: { id },
+      include: { participant: true },
+    });
+    if (!row) throw new NotFoundException('Pase no encontrado');
+    if (!row.participant.active) {
+      throw new BadRequestException('El usuario está inactivo');
+    }
+
+    await this.revokeRemote(row.serialNumber);
+    await this.prisma.walletPass.delete({ where: { id: row.id } });
+
+    const created = await this.createForParticipant(row.participant);
+    return {
+      ok: true as const,
+      participantCode: created.participantCode,
+      pass: created.pass,
     };
   }
 
