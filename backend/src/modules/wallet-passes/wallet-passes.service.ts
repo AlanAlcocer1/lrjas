@@ -164,7 +164,7 @@ export class WalletPassesService {
     const wideLogoURL = this.wideLogoUrl();
     const iconURL = this.iconUrl();
 
-    // Docs: colorPreset green es free; color/logoURL/wideLogoURL/iconURL/locations son Pro.
+    // Fondo: crema de la web (--color-muted #f4f8ef). color es Pro; logos/locations también.
     const payload: Record<string, unknown> = {
       barcodeValue: participant.code,
       barcodeFormat: 'QR',
@@ -173,7 +173,7 @@ export class WalletPassesService {
       organizationName: 'LRJAS',
       description: `Credencial LRJAS — ${name}`,
       colorPreset: 'green',
-      color: '#84BD31',
+      color: '#f4f8ef',
       credentials: 'platform',
       sharingProhibited: true,
       notification: ' ',
