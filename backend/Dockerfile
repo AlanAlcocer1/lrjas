@@ -16,6 +16,7 @@ COPY prisma ./prisma/
 RUN npm ci --omit=dev && npm install ts-node typescript --no-save
 RUN npx prisma generate
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/assets ./assets
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 EXPOSE 3001

@@ -72,13 +72,21 @@ export function CredentialCard({ participant, animated = true }: CredentialCardP
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Button variant="secondary" onClick={downloadQR} disabled={!qrDataUrl} className="gap-2">
+          <Button
+            variant="secondary"
+            onClick={downloadQR}
+            disabled={!qrDataUrl}
+            className="h-auto min-h-11 flex-col gap-1 px-2 py-2.5 text-center leading-tight"
+          >
             <Download className="h-4 w-4" />
-            Descargar QR
+            <span>Descargar QR</span>
           </Button>
-          <Button onClick={downloadCredential} className="gap-2">
+          <Button
+            onClick={downloadCredential}
+            className="h-auto min-h-11 flex-col gap-1 px-2 py-2.5 text-center leading-tight"
+          >
             <QrCode className="h-4 w-4" />
-            Descargar credencial
+            <span>Descargar credencial</span>
           </Button>
         </div>
       </CardContent>

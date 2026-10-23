@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
 import { CredentialCard } from '@/components/credential/CredentialCard';
+import { WalletPassSection } from '@/components/credential/WalletPassSection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -132,6 +133,8 @@ export default function CredentialPage() {
               <div className="space-y-6">
                 <CredentialCard participant={participant} />
 
+                <WalletPassSection code={participant.code} />
+
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -145,7 +148,7 @@ export default function CredentialPage() {
                         Aún no tienes asistencias registradas
                       </p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="max-h-72 space-y-2 overflow-y-auto overscroll-contain pr-1">
                         {participant.attendances.map((a) => (
                           <div
                             key={a.id}
