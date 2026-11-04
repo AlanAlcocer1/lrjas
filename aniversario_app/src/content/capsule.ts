@@ -24,10 +24,13 @@ export const anniversary = {
   years: 2,
   yearsLabel: 'Dos años',
   founded: '2024-11-27',
-  /** Inicio del año que cuenta la cápsula (primer capítulo mensual). */
+  /** Inicio del año que cuenta la cápsula (primer capítulo). */
   start: '2025-11-27',
   /** Día del aniversario (cierra el último capítulo). */
   date: '2026-11-27',
+  /** Rango permitido en el calendario al subir un recuerdo. */
+  uploadMin: '2025-11-01',
+  uploadMax: '2026-12-31',
 };
 
 export type Scene = {
@@ -109,7 +112,7 @@ export type ChapterStory = {
   body: string;
 };
 
-/** Un texto nostálgico distinto por cada uno de los 12 capítulos. */
+/** Un texto nostálgico distinto por cada uno de los 12 capítulos (sin meses). */
 export const chapterStories: ChapterStory[] = [
   {
     title: 'Donde empezó todo',
@@ -117,19 +120,19 @@ export const chapterStories: ChapterStory[] = [
     body: 'Aquellas primeras risas todavía suenan. No sabíamos que estábamos guardando el comienzo.',
   },
   {
-    title: 'Luces de diciembre',
+    title: 'Luz entre amigos',
     emphasis: [0],
-    body: 'El año se iba apagando y nosotros encendíamos algo más caliente: compañía.',
+    body: 'Cuando el día se apaga, queda lo que importa: estar juntos y sentir que hay hogar.',
   },
   {
-    title: 'Enero con nombres nuevos',
-    emphasis: [2],
-    body: 'Caras que un día fueron desconocidas y al siguiente ya tenían lugar en la mesa.',
+    title: 'Caras que se quedan',
+    emphasis: [0],
+    body: 'Quienes un día fueron desconocidos hoy tienen lugar en la mesa y en el corazón.',
   },
   {
     title: 'Promesas en voz baja',
     emphasis: [0],
-    body: 'Febrero trajo abrazos cortos y planes largos. Lo pequeño también construye hogar.',
+    body: 'Abrazos cortos, planes largos. Lo pequeño también construye lo que somos.',
   },
   {
     title: 'El sabor de estar juntos',
@@ -142,9 +145,9 @@ export const chapterStories: ChapterStory[] = [
     body: 'Correr, saltar, celebrar. El cuerpo también reza cuando la comunidad juega.',
   },
   {
-    title: 'Primavera adentro',
-    emphasis: [0],
-    body: 'Algo floreció sin pedir permiso: amistades que ya no caben en una sola tarde.',
+    title: 'Algo que florece',
+    emphasis: [2],
+    body: 'Creció sin pedir permiso: amistades que ya no caben en una sola tarde.',
   },
   {
     title: 'Talento y ternura',
@@ -159,7 +162,7 @@ export const chapterStories: ChapterStory[] = [
   {
     title: 'Bajo las estrellas',
     emphasis: [2],
-    body: 'Fogata, canciones y esa certeza suave de no estar solos en la noche.',
+    body: 'Canciones, miradas y esa certeza suave de no estar solos en la noche.',
   },
   {
     title: 'Puertas abiertas',
