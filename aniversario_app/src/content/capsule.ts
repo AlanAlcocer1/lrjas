@@ -1,7 +1,7 @@
 /**
  * Textos estáticos de la cápsula.
  * Las fotos del reel vienen de la API (`/anniversary-memories`);
- * `fallbackMemories` solo se usan si aún no hay recuerdos publicados.
+ * En prod no se inyectan mockups: la lista viene solo de la API.
  */
 
 export const brand = {
@@ -173,7 +173,10 @@ export const chapterStories: ChapterStory[] = [
   },
 ];
 
-/** Placeholders mientras la API no tiene recuerdos (12 = un recuerdo por capítulo). */
+/**
+ * Solo para demos locales (`?demo=1` si se cablea). En prod la cápsula empieza
+ * vacía y se llena conforme suben recuerdos reales.
+ */
 export const fallbackMemories: MemoryPhoto[] = [
   { id: 'm01', src: '/images/memories/m01.svg', caption: 'Primeros círculos', side: 'odd', memoryDate: '2025-11-28', authorName: 'Ana' },
   { id: 'm02', src: '/images/memories/m02.svg', caption: 'Noche de juegos', side: 'even', memoryDate: '2025-12-15', authorName: 'Luis' },

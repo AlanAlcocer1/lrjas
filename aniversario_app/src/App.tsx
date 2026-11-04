@@ -6,33 +6,30 @@ import { Prologue } from '@/components/Prologue';
 import { MemoryChapter } from '@/components/MemoryChapter';
 import { Bridge } from '@/components/Bridge';
 import { AfterReel } from '@/components/AfterReel';
-import { bridgeScene, fallbackMemories, scenes, type MemoryPhoto } from '@/content/capsule';
+import { bridgeScene, scenes, type MemoryPhoto } from '@/content/capsule';
 import { splitIntoChapters } from '@/lib/chapters';
 import { fetchAllMemories } from '@/services/memoriesApi';
 
 export default function App() {
-  const [memories, setMemories] = useState<MemoryPhoto[]>(fallbackMemories);
+  const [memories, setMemories] = useState<MemoryPhoto[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadMemories = useCallback(async () => {
     try {
       const rows = await fetchAllMemories();
-      if (rows.length) {
-        setMemories(
-          rows.map((r) => ({
-            id: r.id,
-            src: r.imageUrl,
-            caption: r.caption,
-            side: r.side,
-            authorName: r.authorName,
-            memoryDate: r.memoryDate,
-          })),
-        );
-      } else {
-        setMemories(fallbackMemories);
-      }
+      setMemories(
+        rows.map((r) => ({
+          id: r.id,
+          src: r.imageUrl,
+          caption: r.caption,
+          side: r.side,
+          authorName: r.authorName,
+          memoryDate: r.memoryDate,
+        })),
+      );
     } catch {
-      setMemories(fallbackMemories);
+      // Sin mockups: si la API falla, la cápsula queda vacía hasta que haya recuerdos reales
+      setMemories([]);
     } finally {
       setLoading(false);
     }
