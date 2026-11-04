@@ -178,6 +178,11 @@ export class AnniversaryMemoriesService {
     if (Number.isNaN(d.getTime())) {
       throw new BadRequestException('Fecha inválida');
     }
+    const min = new Date('2025-11-01T00:00:00.000Z');
+    const max = new Date('2026-12-31T23:59:59.999Z');
+    if (d < min || d > max) {
+      throw new BadRequestException('La fecha debe estar entre nov 2025 y dic 2026');
+    }
     const today = new Date();
     if (d > today) {
       throw new BadRequestException('La fecha no puede ser futura');

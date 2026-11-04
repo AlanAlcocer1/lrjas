@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { anniversary } from '@/content/capsule';
 import { createMemory } from '@/services/memoriesApi';
 import './ContributeForm.css';
 
@@ -8,6 +9,11 @@ type Props = {
 };
 
 const MAX_BYTES = 100 * 1024 * 1024;
+const DATE_MIN = anniversary.uploadMin;
+const DATE_MAX = (() => {
+  const today = new Date().toISOString().slice(0, 10);
+  return today < anniversary.uploadMax ? today : anniversary.uploadMax;
+})();
 
 export function ContributeForm({ onCreated }: Props) {
   const [authorName, setAuthorName] = useState('');
@@ -140,7 +146,8 @@ export function ContributeForm({ onCreated }: Props) {
               required
               type="date"
               value={memoryDate}
-              max={new Date().toISOString().slice(0, 10)}
+              min={DATE_MIN}
+              max={DATE_MAX}
               onChange={(e) => setMemoryDate(e.target.value)}
             />
           </label>

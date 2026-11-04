@@ -48,15 +48,13 @@ export function MemoryChapter({ chapter }: Props) {
     <section
       className={`mem-chapter${chapter.index % 2 === 0 ? ' mem-chapter--alt' : ''}`}
       data-tone="light"
-      data-chapter={chapter.roman}
+      data-chapter={String(chapter.index).padStart(2, '0')}
       data-label={story.title}
     >
       <aside className="mem-chapter__index">
         <div className="mem-chapter__index-inner">
           <p className="slate mem-chapter__slate">
-            <span>Cap. {chapter.roman}</span>
-            <span className="mem-chapter__rule" aria-hidden />
-            <span>{chapter.rangeLabel}</span>
+            <span>Cap. {chapter.index}</span>
           </p>
           <RevealText
             text={story.title}
