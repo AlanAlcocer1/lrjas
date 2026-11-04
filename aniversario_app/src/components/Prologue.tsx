@@ -9,6 +9,8 @@ type Props = {
   scene: Scene;
   photo?: MemoryPhoto;
   loading?: boolean;
+  /** Portada fija del prólogo: sin pie de autor/fecha. */
+  isCover?: boolean;
 };
 
 /**
@@ -16,7 +18,7 @@ type Props = {
  * primer recuerdo; al desplazar, la ventana se expande hasta llenar la pantalla
  * y los años (20 · 26) se separan hacia los bordes, como una puerta que se abre.
  */
-export function Prologue({ scene, photo, loading }: Props) {
+export function Prologue({ scene, photo, loading, isCover }: Props) {
   const ref = useRef<HTMLElement>(null);
   const reduce = useReducedMotion();
   const { scrollYProgress: p } = useScroll({ target: ref, offset: ['start start', 'end end'] });
@@ -110,7 +112,7 @@ export function Prologue({ scene, photo, loading }: Props) {
           />
         </motion.div>
 
-        {photo && (
+        {photo && !isCover && (
           <motion.p
             className="prologue__caption slate"
             style={{ opacity: still ? 1 : captionOpacity }}

@@ -5,14 +5,14 @@ import { ModerationPanel } from '@/components/ModerationPanel';
 import './AfterReel.css';
 
 type Props = {
-  onMemoryCreated: () => void;
+  onMemoryCreated: (memoryId?: string) => void | Promise<void>;
   onMemoriesChanged?: () => void;
 };
 
 /** Epílogo: lo que nos sostiene, la invitación a sumar un recuerdo y los créditos. */
 export function AfterReel({ onMemoryCreated, onMemoriesChanged }: Props) {
   const reduce = useReducedMotion();
-  const refresh = onMemoriesChanged ?? onMemoryCreated;
+  const refresh = onMemoriesChanged ?? (() => void onMemoryCreated());
 
   return (
     <>

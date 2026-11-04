@@ -2,7 +2,9 @@ import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import {
   deleteMemory,
   fetchAllMemories,
+  fetchCover,
   unlockModeration,
+  uploadCover,
   type ApiMemory,
 } from '@/services/memoriesApi';
 import './ModerationPanel.css';
@@ -20,7 +22,7 @@ function formatDate(iso?: string) {
   return `${d}/${m}/${y}`;
 }
 
-/** Botón casi invisible en créditos + modal para borrar fotos indebidas. */
+/** Botón en créditos + modal: portada fija y borrado de recuerdos. */
 export function ModerationPanel({ onChanged }: Props) {
   const titleId = useId();
   const [gate, setGate] = useState<Gate>('closed');
@@ -28,18 +30,23 @@ export function ModerationPanel({ onChanged }: Props) {
   const [unlockedPassword, setUnlockedPassword] = useState('');
   const [gateError, setGateError] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [cover, setCover] = useState<ApiMemory | null>(null);
   const [rows, setRows] = useState<ApiMemory[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [coverBusy, setCoverBusy] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setListError(null);
     try {
-      setRows(await fetchAllMemories());
+      const [coverRow, list] = await Promise.all([fetchCover(), fetchAllMemories()]);
+      setCover(coverRow);
+      setRows(list);
     } catch (err) {
       setListError(err instanceof Error ? err.message : 'No se pudo cargar');
+      setCover(null);
       setRows([]);
     } finally {
       setLoading(false);
@@ -81,6 +88,27 @@ export function ModerationPanel({ onChanged }: Props) {
       setGateError(err instanceof Error ? err.message : 'Contraseña incorrecta');
     } finally {
       setUnlocking(false);
+    }
+  };
+
+  const onCoverFile = async (file: File | null) => {
+    if (!file || !unlockedPassword) return;
+    setCoverBusy(true);
+    setListError(null);
+    try {
+      const row = await uploadCover(unlockedPassword, file);
+      setCover(row);
+      onChanged();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'No se pudo subir la portada';
+      setListError(msg);
+      if (/contraseña|unauthorized|401/i.test(msg)) {
+        setGate('ask');
+        setUnlockedPassword('');
+        setGateError('Contraseña incorrecta');
+      }
+    } finally {
+      setCoverBusy(false);
     }
   };
 
@@ -144,7 +172,7 @@ export function ModerationPanel({ onChanged }: Props) {
                 <h2 id={titleId} className="mod-title">
                   Moderación
                 </h2>
-                <p className="mod-lead">Contraseña para gestionar recuerdos.</p>
+                <p className="mod-lead">Contraseña para gestionar portada y recuerdos.</p>
                 <label className="mod-field">
                   <span>Contraseña</span>
                   <input
@@ -170,10 +198,12 @@ export function ModerationPanel({ onChanged }: Props) {
                 <header className="mod-panel__head">
                   <div>
                     <h2 id={titleId} className="mod-title">
-                      Recuerdos cargados
+                      Moderación
                     </h2>
                     <p className="mod-lead">
-                      {loading ? 'Cargando…' : `${rows.length} foto${rows.length === 1 ? '' : 's'}`}
+                      {loading
+                        ? 'Cargando…'
+                        : `${rows.length} recuerdo${rows.length === 1 ? '' : 's'} en capítulos`}
                     </p>
                   </div>
                   <div className="mod-actions">
@@ -188,8 +218,36 @@ export function ModerationPanel({ onChanged }: Props) {
 
                 {listError && <p className="mod-error">{listError}</p>}
 
+                <section className="mod-cover">
+                  <h3 className="mod-cover__title">Foto de portada</h3>
+                  <p className="mod-cover__hint">
+                    Va fija en el prólogo (cuadro verde). No entra en los capítulos ni lleva fecha.
+                  </p>
+                  <div className="mod-cover__row">
+                    {cover ? (
+                      <img src={cover.imageUrl} alt="Portada actual" className="mod-cover__img" />
+                    ) : (
+                      <div className="mod-cover__empty">Sin portada</div>
+                    )}
+                    <label className="mod-btn mod-cover__upload">
+                      {coverBusy ? 'Subiendo…' : cover ? 'Cambiar portada' : 'Subir portada'}
+                      <input
+                        className="visually-hidden"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        disabled={coverBusy}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0] ?? null;
+                          e.target.value = '';
+                          void onCoverFile(f);
+                        }}
+                      />
+                    </label>
+                  </div>
+                </section>
+
                 {!loading && rows.length === 0 ? (
-                  <p className="mod-empty">No hay fotos publicadas todavía.</p>
+                  <p className="mod-empty">No hay fotos de capítulos todavía.</p>
                 ) : (
                   <ul className="mod-list">
                     {rows.map((row) => (

@@ -1,11 +1,11 @@
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { anniversary } from '@/content/capsule';
 import { createMemory } from '@/services/memoriesApi';
 import './ContributeForm.css';
 
 type Props = {
-  onCreated: () => void;
+  onCreated: (memoryId?: string) => void | Promise<void>;
 };
 
 const MAX_BYTES = 100 * 1024 * 1024;
@@ -16,6 +16,7 @@ const DATE_MAX = (() => {
 })();
 
 export function ContributeForm({ onCreated }: Props) {
+  const dialogTitleId = useId();
   const [authorName, setAuthorName] = useState('');
   const [memoryDate, setMemoryDate] = useState('');
   const [caption, setCaption] = useState('');
@@ -23,11 +24,10 @@ export function ContributeForm({ onCreated }: Props) {
   const [preview, setPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const reduce = useReducedMotion();
 
   const onFile = (file: File | null) => {
-    setOk(false);
     setError(null);
     if (preview) URL.revokeObjectURL(preview);
     if (!file) {
@@ -65,20 +65,31 @@ export function ContributeForm({ onCreated }: Props) {
     }
     setSubmitting(true);
     setError(null);
-    setOk(false);
     try {
-      await createMemory({ authorName, memoryDate, caption, photo });
-      setOk(true);
+      const created = await createMemory({ authorName, memoryDate, caption, photo });
       setAuthorName('');
       setMemoryDate('');
       setCaption('');
       onFile(null);
-      onCreated();
+      setCreatedId(created.id);
+      await onCreated(created.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al subir');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const goSeePhoto = () => {
+    const id = createdId;
+    setCreatedId(null);
+    if (!id) return;
+    window.setTimeout(() => {
+      document.getElementById(`memory-${id}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 80);
   };
 
   return (
@@ -166,7 +177,6 @@ export function ContributeForm({ onCreated }: Props) {
 
           <div aria-live="polite">
             {error && <p className="contribute__error">{error}</p>}
-            {ok && <p className="contribute__ok">¡Gracias! Tu recuerdo ya está en la cápsula.</p>}
           </div>
 
           <button type="submit" className="contribute__submit" disabled={submitting}>
@@ -175,6 +185,41 @@ export function ContributeForm({ onCreated }: Props) {
           </button>
         </div>
       </form>
+
+      {createdId && (
+        <div
+          className="contribute-success"
+          role="presentation"
+          onClick={() => setCreatedId(null)}
+        >
+          <div
+            className="contribute-success__card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={dialogTitleId}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id={dialogTitleId} className="contribute-success__title display">
+              ¡Listo!
+            </h2>
+            <p className="contribute-success__body">
+              Tu recuerdo ya está en la cápsula. ¿Quieres ver cómo quedó?
+            </p>
+            <div className="contribute-success__actions">
+              <button
+                type="button"
+                className="contribute-success__btn contribute-success__btn--ghost"
+                onClick={() => setCreatedId(null)}
+              >
+                Cerrar
+              </button>
+              <button type="button" className="contribute-success__btn" onClick={goSeePhoto}>
+                Ver mi foto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
