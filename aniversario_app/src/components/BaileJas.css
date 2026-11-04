@@ -1,0 +1,145 @@
+.baile {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(132, 189, 49, 0.22), transparent 55%),
+    var(--frame);
+  color: var(--cream);
+  padding: clamp(5rem, 14vh, 9rem) var(--gutter);
+}
+
+.baile__glow {
+  position: absolute;
+  inset: -20% 10% auto;
+  height: 55%;
+  background: radial-gradient(ellipse at center, rgba(132, 189, 49, 0.28), transparent 70%);
+  pointer-events: none;
+  animation: baile-glow 5s ease-in-out infinite alternate;
+}
+
+@keyframes baile-glow {
+  from {
+    opacity: 0.55;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.08) translateY(4%);
+  }
+}
+
+.baile__inner {
+  position: relative;
+  z-index: 1;
+  max-width: 52rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.baile__eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin: 0 0 1.5rem;
+  color: var(--gold-soft);
+}
+
+.baile__badge {
+  display: inline-block;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(132, 189, 49, 0.55);
+  background: rgba(132, 189, 49, 0.12);
+  color: var(--leaf);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.baile__rule {
+  width: clamp(2rem, 6vw, 5rem);
+  height: 1px;
+  background: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .baile__glow {
+    animation: none;
+  }
+}
+
+.baile__title {
+  display: block;
+  width: fit-content;
+  max-width: min(100%, 18ch);
+  margin-inline: auto;
+  text-align: center;
+  text-wrap: balance;
+  font-size: clamp(2.6rem, 7vw, 5.5rem);
+  line-height: 1.02;
+  color: var(--cream);
+}
+
+.baile__title em {
+  color: var(--leaf);
+  font-style: italic;
+}
+
+.baile__body {
+  margin: 1.25rem auto 2.5rem;
+  max-width: 36rem;
+  font-size: clamp(1.05rem, 2vw, 1.2rem);
+  line-height: 1.55;
+  color: rgba(247, 251, 240, 0.78);
+}
+
+.baile__frame {
+  position: relative;
+  width: min(100%, 48rem);
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: #0a140c;
+  box-shadow:
+    0 0 0 1px rgba(132, 189, 49, 0.28),
+    0 28px 80px rgba(0, 0, 0, 0.45);
+}
+
+/* Tapa título / canal que YouTube pinta arriba al pausar o al pasar el mouse */
+.baile__frame::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: clamp(3rem, 12%, 4.5rem);
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 20, 12, 0.92) 0%,
+    rgba(10, 20, 12, 0.55) 55%,
+    transparent 100%
+  );
+}
+
+.baile__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.baile__placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--gold-soft);
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

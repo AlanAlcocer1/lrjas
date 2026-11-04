@@ -87,6 +87,21 @@ export const celebration = {
   body: 'Gracias por cada reunión, cada servicio y cada noche de conversación. Esto apenas empieza.',
 };
 
+/**
+ * Invitación al LRJAS FEST (aniversario).
+ * Pega el URL de YouTube en `youtubeUrl` (watch, youtu.be o embed).
+ */
+export const baileJas = {
+  eyebrow: 'LRJAS FEST',
+  title: 'Ven a celebrar el aniversario',
+  emphasis: [2],
+  body:
+    'Este 27 de noviembre nos reunimos en el LRJAS FEST para celebrar dos años de LRJAS. Música, amigos y la noche que cierra (y abre) la historia.',
+  dateLabel: '27 de noviembre de 2026',
+  /** Ej. https://www.youtube.com/watch?v=XXXX o https://youtu.be/XXXX */
+  youtubeUrl: 'https://youtu.be/qIMd_vESXyw',
+};
+
 /** Puente entre el archivo y el epílogo. */
 export const bridgeScene: Scene = {
   id: 'bridge',
