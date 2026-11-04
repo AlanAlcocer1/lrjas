@@ -1,0 +1,17 @@
+.reveal {
+  display: inline;
+}
+
+.reveal__mask {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  /* deja respirar descendentes e itálicas sin cortar */
+  padding: 0.04em 0.06em 0.12em;
+  margin: -0.04em -0.06em -0.12em;
+}
+
+.reveal__word {
+  display: inline-block;
+  will-change: transform;
+}

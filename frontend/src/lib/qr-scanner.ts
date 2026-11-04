@@ -1,14 +1,32 @@
 import { Html5Qrcode, type Html5QrcodeCameraScanConfig } from 'html5-qrcode';
 
-const BACK_CAMERA_RE = /back|rear|environment|trasera|posterior|wide/i;
+const BACK_CAMERA_RE = /back|rear|environment|trasera|posterior|ultra\s*wide|wide\s*angle/i;
+const FRONT_CAMERA_RE = /front|user|facing|frontal|selfie/i;
 const noop = () => {};
 
+/** iPhone/iPad (incl. iPadOS que reporta MacIntel). */
+function isAppleTouchDevice() {
+  if (typeof navigator === 'undefined') return false;
+  return (
+    /iPad|iPhone|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+}
+
+/**
+ * Cuadro grande: en iOS Safari un qrbox chico + video cropeado hace que el QR
+ * “se vea” en pantalla pero fuera de la región que html5-qrcode decodifica.
+ */
 const SCAN_CONFIG: Html5QrcodeCameraScanConfig = {
-  fps: 10,
+  fps: 15,
+  aspectRatio: 1.333334,
   qrbox: (viewfinderWidth, viewfinderHeight) => {
     const edge = Math.min(viewfinderWidth, viewfinderHeight);
-    const size = Math.max(Math.floor(edge * 0.7), 150);
-    return { width: size, height: size };
+    const size = Math.max(Math.floor(edge * 0.88), 220);
+    return {
+      width: Math.min(size, viewfinderWidth),
+      height: Math.min(size, viewfinderHeight),
+    };
   },
 };
 
@@ -38,6 +56,20 @@ async function tryStart(
   await scanner.start(camera, SCAN_CONFIG, onScan, noop);
 }
 
+function pickBackCamera(
+  cameras: { id: string; label: string }[],
+): { id: string; label: string } | undefined {
+  const labeledBack = cameras.find(({ label }) => BACK_CAMERA_RE.test(label));
+  if (labeledBack) return labeledBack;
+
+  const notFront = cameras.find(({ label }) => label && !FRONT_CAMERA_RE.test(label));
+  if (notFront) return notFront;
+
+  // En muchos Android/iOS la trasera no es la [0] (frontal). Preferir la última no-frontal.
+  const fromEnd = [...cameras].reverse().find(({ label }) => !FRONT_CAMERA_RE.test(label));
+  return fromEnd ?? cameras.at(-1) ?? cameras[0];
+}
+
 export async function startQrScanner(
   elementId: string,
   onScan: (decoded: string) => void,
@@ -45,35 +77,38 @@ export async function startQrScanner(
   clearContainer(elementId);
 
   let lastError: unknown;
+  const apple = isAppleTouchDevice();
+
+  // Safari iOS: facingMode es más fiable que deviceId de getCameras().
+  const constraintAttempts: MediaTrackConstraints[] = apple
+    ? [
+        { facingMode: { exact: 'environment' } },
+        { facingMode: { ideal: 'environment' } },
+        { facingMode: 'environment' },
+        { facingMode: { ideal: 'user' } },
+      ]
+    : [
+        { facingMode: { ideal: 'environment' } },
+        { facingMode: 'user' },
+      ];
+
+  const attempts: Array<string | MediaTrackConstraints> = [...constraintAttempts];
 
   try {
     const cameras = await Html5Qrcode.getCameras();
     if (cameras.length) {
-      const preferred =
-        cameras.find(({ label }) => BACK_CAMERA_RE.test(label)) ??
-        cameras.at(-1) ??
-        cameras[0];
-
-      const scanner = new Html5Qrcode(elementId);
-      try {
-        await tryStart(scanner, preferred.id, onScan);
-        return scanner;
-      } catch (error) {
-        lastError = error;
-        await safeStop(scanner);
-        clearContainer(elementId);
+      const preferred = pickBackCamera(cameras);
+      if (preferred) {
+        // En iOS: facingMode primero; deviceId como respaldo.
+        if (apple) attempts.push(preferred.id);
+        else attempts.unshift(preferred.id);
       }
     }
   } catch (error) {
     lastError = error;
   }
 
-  const constraints: MediaTrackConstraints[] = [
-    { facingMode: { ideal: 'environment' } },
-    { facingMode: 'user' },
-  ];
-
-  for (const camera of constraints) {
+  for (const camera of attempts) {
     clearContainer(elementId);
     const scanner = new Html5Qrcode(elementId);
     try {

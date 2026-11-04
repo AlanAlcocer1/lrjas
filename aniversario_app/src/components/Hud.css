@@ -1,0 +1,95 @@
+.hud {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.hud__top,
+.hud__bottom {
+  --hud-ink: var(--cream);
+  --hud-accent: var(--leaf);
+  color: var(--hud-ink);
+  transition: color 0.6s var(--ease-out);
+}
+
+.hud__top.hud--light,
+.hud__bottom.hud--light {
+  --hud-ink: var(--ink);
+  --hud-accent: var(--leaf-darker);
+}
+
+.hud__top,
+.hud__bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding-left: max(var(--gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--gutter), env(safe-area-inset-right, 0px));
+}
+
+.hud__top {
+  top: 0;
+  justify-content: space-between;
+  padding-top: calc(1.4rem + env(safe-area-inset-top, 0px));
+}
+
+.hud__bottom {
+  bottom: 0;
+  padding-bottom: calc(1.4rem + env(safe-area-inset-bottom, 0px));
+}
+
+.hud__brand i {
+  font-style: normal;
+  color: var(--hud-accent);
+  margin: 0 0.15em;
+}
+
+.hud__chapter {
+  display: flex;
+  gap: 0.9rem;
+  text-align: right;
+}
+
+.hud__chapter-no {
+  color: var(--hud-accent);
+}
+
+.hud__track {
+  position: relative;
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--hud-ink) 25%, transparent);
+  overflow: hidden;
+}
+
+.hud__fill {
+  position: absolute;
+  inset: 0;
+  background: var(--hud-accent);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+
+.hud__tc {
+  min-width: 11ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--hud-accent);
+}
+
+@media (max-width: 640px) {
+  .hud__tc {
+    display: none;
+  }
+
+  .hud__chapter-label {
+    max-width: 45vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

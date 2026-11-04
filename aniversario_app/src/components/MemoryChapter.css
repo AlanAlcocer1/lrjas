@@ -1,0 +1,162 @@
+.mem-chapter {
+  position: relative;
+  background: var(--cream);
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: clamp(0.75rem, 2vw, 2rem);
+  padding: clamp(5rem, 12vh, 9rem) var(--gutter) clamp(5rem, 14vh, 10rem);
+}
+
+.mem-chapter--alt {
+  background: var(--cream-deep);
+}
+
+.mem-chapter__index {
+  grid-column: 1 / span 4;
+}
+
+.mem-chapter__index-inner {
+  position: sticky;
+  top: 18vh;
+}
+
+.mem-chapter__slate {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 2rem;
+  color: var(--leaf-darker);
+}
+
+.mem-chapter__rule {
+  width: clamp(2rem, 4vw, 4rem);
+  height: 1px;
+  background: currentColor;
+}
+
+.mem-chapter__title {
+  font-size: clamp(2.4rem, 5vw, 4.5rem);
+  max-width: 10ch;
+}
+
+.mem-chapter__title em {
+  color: var(--leaf-darker);
+}
+
+.mem-chapter__body {
+  margin: 1.1rem 0 0;
+  max-width: 28ch;
+  font-size: 1.02rem;
+  line-height: 1.55;
+  color: var(--mist);
+}
+
+.mem-chapter__counter {
+  margin: clamp(2rem, 6vh, 4rem) 0 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  color: var(--mist);
+}
+
+.mem-chapter__counter-now {
+  font-size: clamp(2.8rem, 5vw, 5rem);
+  color: var(--leaf);
+  font-variant-numeric: tabular-nums;
+  min-width: 2ch;
+}
+
+.mem-chapter__empty {
+  grid-column: 5 / -1;
+  margin: 0;
+  padding: 12vh 0;
+  color: var(--mist);
+  max-width: 28ch;
+}
+
+.mem-chapter__list {
+  grid-column: 5 / -1;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* Todas las fotos: misma celda, mismo aspect 4:5 vía RevealPhoto */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(2.5rem, 6vh, 4.5rem) clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.mem-chapter__item {
+  margin: 0;
+}
+
+.mem-chapter__fig {
+  margin: 0;
+  width: 100%;
+}
+
+.mem-chapter__fig .reveal-photo {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+}
+
+.mem-chapter__caption {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 1rem;
+}
+
+.mem-chapter__text {
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 1.6vw, 1.45rem);
+  line-height: 1.2;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.mem-chapter__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem;
+  font-size: 0.92rem;
+  color: var(--leaf-darker);
+}
+
+.mem-chapter__author {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.mem-chapter__date {
+  font-variant-numeric: tabular-nums;
+  color: var(--mist);
+}
+
+@media (max-width: 900px) {
+  .mem-chapter {
+    display: block;
+  }
+
+  .mem-chapter__index-inner {
+    position: static;
+    margin-bottom: 2.5rem;
+  }
+
+  .mem-chapter__counter {
+    display: none;
+  }
+
+  .mem-chapter__list {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.75rem 1rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .mem-chapter__list {
+    grid-template-columns: 1fr;
+    max-width: 22rem;
+    margin-inline: auto;
+  }
+}
