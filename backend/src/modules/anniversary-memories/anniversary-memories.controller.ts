@@ -62,8 +62,10 @@ export class AnniversaryMemoriesController {
   }
 
   @Get('cover')
-  cover() {
-    return this.memories.getCover();
+  async cover() {
+    // Siempre JSON válido (`null` si aún no hay portada) — evita body vacío.
+    const row = await this.memories.getCover();
+    return row ?? null;
   }
 
   @Get('summary')

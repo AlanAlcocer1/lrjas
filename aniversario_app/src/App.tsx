@@ -36,12 +36,20 @@ export default function App() {
 
   const loadMemories = useCallback(async () => {
     try {
-      const [coverRow, rows] = await Promise.all([fetchCover(), fetchAllMemories()]);
-      setCover(coverRow ? toPhoto(coverRow) : null);
-      setMemories(rows.map(toPhoto));
-    } catch {
-      setCover(null);
-      setMemories([]);
+      const [coverResult, rowsResult] = await Promise.allSettled([
+        fetchCover(),
+        fetchAllMemories(),
+      ]);
+      setCover(
+        coverResult.status === 'fulfilled' && coverResult.value
+          ? toPhoto(coverResult.value)
+          : null,
+      );
+      if (rowsResult.status === 'fulfilled') {
+        setMemories(rowsResult.value.map(toPhoto));
+      } else {
+        setMemories([]);
+      }
     } finally {
       setLoading(false);
     }

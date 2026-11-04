@@ -36,12 +36,20 @@ export async function fetchAllMemories(pageSize = 200): Promise<ApiMemory[]> {
 }
 
 export async function fetchCover(): Promise<ApiMemory | null> {
-  const res = await fetch(`${API_URL}/anniversary-memories/cover`);
-  if (!res.ok) {
-    throw new Error(await readError(res, 'No se pudo cargar la portada'));
+  try {
+    const res = await fetch(`${API_URL}/anniversary-memories/cover`);
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      // Backend viejo sin ruta /cover: no tumbar el resto de la cápsula
+      return null;
+    }
+    const text = await res.text();
+    if (!text.trim() || text.trim() === 'null') return null;
+    const data = JSON.parse(text) as ApiMemory | null;
+    return data?.imageUrl ? data : null;
+  } catch {
+    return null;
   }
-  const data = (await res.json()) as ApiMemory | null;
-  return data;
 }
 
 export async function createMemory(input: {
