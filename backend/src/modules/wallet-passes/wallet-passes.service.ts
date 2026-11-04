@@ -245,7 +245,8 @@ export class WalletPassesService {
         {
           latitude: 20.979415268208065,
           longitude: -89.63596174645434,
-          relevantText: 'LRJAS',
+          // Lock screen al acercarte (mejor corto: Apple lo recorta si es muy largo)
+          relevantText: '¡Estás cerca del LRJAS! Ven y mira las actividades de hoy',
         },
       ],
     };
