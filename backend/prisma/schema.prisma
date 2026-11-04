@@ -215,6 +215,7 @@ model RaffleTicket {
 }
 
 /// Recuerdo de la cápsula de aniversario (foto en R2 como WebP).
+/// `isCover`: portada fija del prólogo (no entra en capítulos).
 model AnniversaryMemory {
   id          String   @id @default(uuid())
   authorName  String   @map("author_name")
@@ -222,12 +223,14 @@ model AnniversaryMemory {
   caption     String
   imageUrl    String   @map("image_url")
   imageKey    String   @map("image_key")
+  isCover     Boolean  @default(false) @map("is_cover")
   active      Boolean  @default(true)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@index([createdAt])
   @@index([active])
+  @@index([isCover])
   @@map("anniversary_memories")
 }
 

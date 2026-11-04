@@ -24,7 +24,7 @@ const ALLOWED = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 const BLOCKED_VIDEO = /^(video\/|application\/octet)/i;
 const IMAGE_EXT = /\.(jpe?g|png|webp)$/i;
 
-/** Polaroid 4:5 fijo — todas las fotos salen al mismo tamaño en el reel. */
+/** Polaroid / portada 4:5 fijo. */
 const POLAROID_WIDTH = 800;
 const POLAROID_HEIGHT = 1000;
 const WEBP_QUALITY = Number(process.env.WEBP_QUALITY || 85) || 85;
@@ -37,8 +37,7 @@ export class AnniversaryMemoriesService {
   ) {}
 
   /**
-   * Lista paginada. `from`/`to` (AAAA-MM-DD, inclusivos) filtran por fecha del
-   * recuerdo: el micrositio pide cada capítulo mensual por separado.
+   * Lista de recuerdos de capítulos (sin la portada).
    */
   async list(params: { limit?: number; offset?: number; from?: string; to?: string } = {}) {
     const take = Math.min(Math.max(params.limit ?? 100, 1), 1000);
@@ -47,7 +46,11 @@ export class AnniversaryMemoriesService {
     if (params.from) memoryDate.gte = this.parseRangeDate(params.from);
     if (params.to) memoryDate.lte = this.parseRangeDate(params.to);
     const rows = await this.prisma.anniversaryMemory.findMany({
-      where: { active: true, ...(params.from || params.to ? { memoryDate } : {}) },
+      where: {
+        active: true,
+        isCover: false,
+        ...(params.from || params.to ? { memoryDate } : {}),
+      },
       orderBy: [{ memoryDate: 'asc' }, { createdAt: 'asc' }],
       take,
       skip,
@@ -55,11 +58,18 @@ export class AnniversaryMemoriesService {
     return rows.map((row, i) => this.map(row, skip + i));
   }
 
-  /** Conteo de recuerdos por día: el micrositio arma los capítulos con esto. */
+  async getCover() {
+    const row = await this.prisma.anniversaryMemory.findFirst({
+      where: { active: true, isCover: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+    return row ? this.map(row, 0) : null;
+  }
+
   async summary() {
     const groups = await this.prisma.anniversaryMemory.groupBy({
       by: ['memoryDate'],
-      where: { active: true },
+      where: { active: true, isCover: false },
       _count: { _all: true },
       orderBy: { memoryDate: 'asc' },
     });
@@ -85,6 +95,7 @@ export class AnniversaryMemoriesService {
       caption: string;
       imageUrl: string;
       createdAt: Date;
+      isCover?: boolean;
     },
     index: number,
   ) {
@@ -95,8 +106,43 @@ export class AnniversaryMemoriesService {
       caption: row.caption,
       imageUrl: row.imageUrl,
       createdAt: row.createdAt.toISOString(),
+      isCover: Boolean(row.isCover),
       side: index % 2 === 0 ? ('odd' as const) : ('even' as const),
     };
+  }
+
+  private assertImageFile(file?: Express.Multer.File) {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('Falta la foto');
+    }
+    if (file.size > MAX_BYTES) {
+      throw new BadRequestException('La foto no puede superar 100 MB');
+    }
+    const mime = (file.mimetype || '').toLowerCase();
+    const original = (file.originalname || '').toLowerCase();
+    if (BLOCKED_VIDEO.test(mime) || /\.(mp4|mov|webm|avi|mkv)$/i.test(original)) {
+      throw new BadRequestException('Solo se permiten fotos, no videos');
+    }
+    if (!ALLOWED.has(mime) && !(mime.startsWith('image/') && IMAGE_EXT.test(original))) {
+      throw new BadRequestException('Formato no soportado. Usa JPG, PNG o WebP');
+    }
+  }
+
+  private async toWebp(buffer: Buffer) {
+    try {
+      return await sharp(buffer, { failOn: 'none' })
+        .rotate()
+        .resize({
+          width: POLAROID_WIDTH,
+          height: POLAROID_HEIGHT,
+          fit: 'cover',
+          position: 'centre',
+        })
+        .webp({ quality: WEBP_QUALITY })
+        .toBuffer();
+    } catch {
+      throw new BadRequestException('No se pudo procesar la imagen');
+    }
   }
 
   async create(input: {
@@ -121,39 +167,8 @@ export class AnniversaryMemoriesService {
     }
 
     const date = this.parseDate(input.memoryDate);
-    const file = input.file;
-    if (!file?.buffer?.length) {
-      throw new BadRequestException('Falta la foto');
-    }
-    if (file.size > MAX_BYTES) {
-      throw new BadRequestException('La foto no puede superar 100 MB');
-    }
-    const mime = (file.mimetype || '').toLowerCase();
-    const original = (file.originalname || '').toLowerCase();
-    if (BLOCKED_VIDEO.test(mime) || /\.(mp4|mov|webm|avi|mkv)$/i.test(original)) {
-      throw new BadRequestException('Solo se permiten fotos, no videos');
-    }
-    if (!ALLOWED.has(mime) && !(mime.startsWith('image/') && IMAGE_EXT.test(original))) {
-      throw new BadRequestException('Formato no soportado. Usa JPG, PNG o WebP');
-    }
-
-    let webp: Buffer;
-    try {
-      // cover + exacto 800×1000 → mismas proporciones en todas las polaroids
-      webp = await sharp(file.buffer, { failOn: 'none' })
-        .rotate()
-        .resize({
-          width: POLAROID_WIDTH,
-          height: POLAROID_HEIGHT,
-          fit: 'cover',
-          position: 'centre',
-        })
-        .webp({ quality: WEBP_QUALITY })
-        .toBuffer();
-    } catch {
-      throw new BadRequestException('No se pudo procesar la imagen');
-    }
-
+    this.assertImageFile(input.file);
+    const webp = await this.toWebp(input.file!.buffer);
     const uploaded = await this.r2.uploadWebp(webp, 'images/anniversary');
 
     const row = await this.prisma.anniversaryMemory.create({
@@ -163,9 +178,64 @@ export class AnniversaryMemoriesService {
         caption,
         imageUrl: uploaded.url,
         imageKey: uploaded.key,
+        isCover: false,
       },
     });
 
+    return this.map(row, 0);
+  }
+
+  /** Sube o reemplaza la foto de portada del prólogo (sin fecha/capítulo). */
+  async upsertCover(file?: Express.Multer.File) {
+    if (!this.r2.isConfigured()) {
+      throw new ServiceUnavailableException(
+        'Subida no disponible: configura Cloudflare R2 en el servidor',
+      );
+    }
+    this.assertImageFile(file);
+    const webp = await this.toWebp(file!.buffer);
+    const uploaded = await this.r2.uploadWebp(webp, 'images/anniversary');
+
+    const existing = await this.prisma.anniversaryMemory.findFirst({
+      where: { isCover: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (existing) {
+      const oldKey = existing.imageKey;
+      const row = await this.prisma.anniversaryMemory.update({
+        where: { id: existing.id },
+        data: {
+          imageUrl: uploaded.url,
+          imageKey: uploaded.key,
+          authorName: 'Portada',
+          caption: 'Portada',
+          memoryDate: new Date('2025-11-01T12:00:00.000Z'),
+          active: true,
+          isCover: true,
+        },
+      });
+      if (oldKey && oldKey !== uploaded.key) {
+        try {
+          await this.r2.deleteObject(oldKey);
+        } catch {
+          /* ignore */
+        }
+      }
+      return this.map(row, 0);
+    }
+
+    const row = await this.prisma.anniversaryMemory.create({
+      data: {
+        authorName: 'Portada',
+        caption: 'Portada',
+        memoryDate: new Date('2025-11-01T12:00:00.000Z'),
+        imageUrl: uploaded.url,
+        imageKey: uploaded.key,
+        isCover: true,
+        active: true,
+      },
+    });
     return this.map(row, 0);
   }
 

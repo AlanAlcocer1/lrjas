@@ -15,6 +15,24 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { AnniversaryMemoriesService } from './anniversary-memories.service';
 
+const photoUpload = FileInterceptor('photo', {
+  storage: memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const mime = (file.mimetype || '').toLowerCase();
+    const name = (file.originalname || '').toLowerCase();
+    if (mime.startsWith('video/') || /\.(mp4|mov|webm|avi|mkv)$/i.test(name)) {
+      cb(new Error('Solo se permiten fotos, no videos'), false);
+      return;
+    }
+    if (!mime.startsWith('image/')) {
+      cb(new Error('Solo se permiten fotos (JPG, PNG o WebP)'), false);
+      return;
+    }
+    cb(null, true);
+  },
+});
+
 @Controller('anniversary-memories')
 export class AnniversaryMemoriesController {
   constructor(private memories: AnniversaryMemoriesService) {}
@@ -43,31 +61,18 @@ export class AnniversaryMemoriesController {
     });
   }
 
+  @Get('cover')
+  cover() {
+    return this.memories.getCover();
+  }
+
   @Get('summary')
   summary() {
     return this.memories.summary();
   }
 
   @Post()
-  @UseInterceptors(
-    FileInterceptor('photo', {
-      storage: memoryStorage(),
-      limits: { fileSize: 100 * 1024 * 1024 },
-      fileFilter: (_req, file, cb) => {
-        const mime = (file.mimetype || '').toLowerCase();
-        const name = (file.originalname || '').toLowerCase();
-        if (mime.startsWith('video/') || /\.(mp4|mov|webm|avi|mkv)$/i.test(name)) {
-          cb(new Error('Solo se permiten fotos, no videos'), false);
-          return;
-        }
-        if (!mime.startsWith('image/')) {
-          cb(new Error('Solo se permiten fotos (JPG, PNG o WebP)'), false);
-          return;
-        }
-        cb(null, true);
-      },
-    }),
-  )
+  @UseInterceptors(photoUpload)
   create(
     @UploadedFile() file: Express.Multer.File,
     @Body('authorName') authorName: string,
@@ -83,7 +88,17 @@ export class AnniversaryMemoriesController {
     return { ok: true as const };
   }
 
-  /** Moderación desde la cápsula: header `x-moderation-password`. */
+  /** Portada del prólogo: solo moderación. */
+  @Post('cover')
+  @UseInterceptors(photoUpload)
+  upsertCover(
+    @UploadedFile() file: Express.Multer.File,
+    @Headers('x-moderation-password') password?: string,
+  ) {
+    this.assertModerationPassword(password);
+    return this.memories.upsertCover(file);
+  }
+
   @Delete(':id')
   remove(
     @Param('id') id: string,

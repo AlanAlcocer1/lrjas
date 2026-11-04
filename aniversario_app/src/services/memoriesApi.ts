@@ -8,6 +8,7 @@ export type ApiMemory = {
   imageUrl: string;
   createdAt: string;
   side: 'odd' | 'even';
+  isCover?: boolean;
 };
 
 export async function fetchMemories(limit = 100, offset = 0): Promise<ApiMemory[]> {
@@ -20,7 +21,7 @@ export async function fetchMemories(limit = 100, offset = 0): Promise<ApiMemory[
   return res.json();
 }
 
-/** Trae todos los recuerdos en páginas (para armar los 12 capítulos). */
+/** Trae todos los recuerdos de capítulos (sin portada). */
 export async function fetchAllMemories(pageSize = 200): Promise<ApiMemory[]> {
   const all: ApiMemory[] = [];
   let offset = 0;
@@ -32,6 +33,15 @@ export async function fetchAllMemories(pageSize = 200): Promise<ApiMemory[]> {
     if (offset > 5000) break;
   }
   return all;
+}
+
+export async function fetchCover(): Promise<ApiMemory | null> {
+  const res = await fetch(`${API_URL}/anniversary-memories/cover`);
+  if (!res.ok) {
+    throw new Error(await readError(res, 'No se pudo cargar la portada'));
+  }
+  const data = (await res.json()) as ApiMemory | null;
+  return data;
 }
 
 export async function createMemory(input: {
@@ -64,6 +74,20 @@ export async function unlockModeration(password: string): Promise<void> {
   if (!res.ok) {
     throw new Error(await readError(res, 'Contraseña incorrecta'));
   }
+}
+
+export async function uploadCover(password: string, photo: File): Promise<ApiMemory> {
+  const body = new FormData();
+  body.append('photo', photo);
+  const res = await fetch(`${API_URL}/anniversary-memories/cover`, {
+    method: 'POST',
+    headers: { 'x-moderation-password': password },
+    body,
+  });
+  if (!res.ok) {
+    throw new Error(await readError(res, 'No se pudo subir la portada'));
+  }
+  return res.json();
 }
 
 export async function deleteMemory(id: string, password: string): Promise<void> {

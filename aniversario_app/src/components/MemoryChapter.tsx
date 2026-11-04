@@ -81,7 +81,12 @@ export function MemoryChapter({ chapter }: Props) {
             const date = formatDate(m.memoryDate);
             const author = m.authorName?.trim();
             return (
-              <li key={m.id} className="mem-chapter__item" data-index={i}>
+              <li
+                key={m.id}
+                id={`memory-${m.id}`}
+                className="mem-chapter__item"
+                data-index={i}
+              >
                 <figure className="mem-chapter__fig">
                   <RevealPhoto
                     src={m.src}
