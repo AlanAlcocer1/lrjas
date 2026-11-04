@@ -41,13 +41,21 @@ export function ModerationPanel({ onChanged }: Props) {
     setLoading(true);
     setListError(null);
     try {
-      const [coverRow, list] = await Promise.all([fetchCover(), fetchAllMemories()]);
-      setCover(coverRow);
-      setRows(list);
-    } catch (err) {
-      setListError(err instanceof Error ? err.message : 'No se pudo cargar');
-      setCover(null);
-      setRows([]);
+      const [coverResult, listResult] = await Promise.allSettled([
+        fetchCover(),
+        fetchAllMemories(),
+      ]);
+      setCover(coverResult.status === 'fulfilled' ? coverResult.value : null);
+      if (listResult.status === 'fulfilled') {
+        setRows(listResult.value);
+      } else {
+        setRows([]);
+        setListError(
+          listResult.reason instanceof Error
+            ? listResult.reason.message
+            : 'No se pudieron cargar los recuerdos',
+        );
+      }
     } finally {
       setLoading(false);
     }
