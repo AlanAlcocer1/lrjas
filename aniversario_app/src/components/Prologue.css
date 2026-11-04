@@ -1,0 +1,184 @@
+.prologue {
+  position: relative;
+  height: 330vh;
+  background: var(--frame);
+  color: var(--cream);
+}
+
+.prologue__stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.prologue__aperture {
+  position: absolute;
+  inset: 0;
+  background: var(--leaf-darker);
+  will-change: clip-path;
+  /* estado inicial (también sin movimiento reducido no aplica) */
+  clip-path: inset(calc(50% - 21vh) calc(50% - 16.8vh));
+}
+
+.prologue__aperture img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  will-change: transform;
+}
+
+.prologue__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--frame);
+}
+
+.prologue__year {
+  position: absolute;
+  font-size: clamp(7rem, 21vw, 21rem);
+  color: var(--leaf-dark);
+  line-height: 0.8;
+  pointer-events: none;
+  user-select: none;
+}
+
+.prologue__year--start {
+  top: 9vh;
+  left: calc(var(--gutter) - 0.04em);
+}
+
+.prologue__year--end {
+  bottom: 7vh;
+  right: calc(var(--gutter) - 0.04em);
+  font-style: italic;
+}
+
+.prologue__titles {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 var(--gutter);
+  z-index: 2;
+}
+
+.prologue__logo {
+  width: clamp(8.5rem, 13vw, 13rem);
+  height: auto;
+  margin-bottom: clamp(1.5rem, 5vh, 3rem);
+}
+
+.prologue__kicker {
+  margin: 0 0 1.25rem;
+  color: var(--gold-soft);
+}
+
+.prologue__title {
+  max-width: 11ch;
+  font-size: clamp(3.4rem, 9.5vw, 10rem);
+  color: var(--cream);
+  text-wrap: balance;
+}
+
+.prologue__title em {
+  color: var(--leaf);
+}
+
+.prologue__caption {
+  position: absolute;
+  left: var(--gutter);
+  bottom: 4.75rem;
+  margin: 0;
+  display: flex;
+  gap: 1.25rem;
+  max-width: min(36rem, 70vw);
+  color: var(--cream);
+  z-index: 2;
+}
+
+.prologue__caption span:first-child {
+  color: var(--leaf);
+  flex: none;
+}
+
+.prologue__cue {
+  position: absolute;
+  left: 50%;
+  bottom: 4.5rem;
+  transform: translateX(-50%);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  color: var(--gold-soft);
+  z-index: 2;
+  white-space: nowrap;
+}
+
+.prologue__cue-line {
+  width: 1px;
+  height: 2.75rem;
+  background: currentColor;
+  transform-origin: top;
+  animation: cue-drop 2.4s var(--ease-cine) infinite;
+}
+
+@keyframes cue-drop {
+  0% {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  45% {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+  55% {
+    transform: scaleY(1);
+    transform-origin: bottom;
+  }
+  100% {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+}
+
+@media (max-width: 720px) {
+  .prologue__year--start {
+    top: 11vh;
+  }
+
+  .prologue__year--end {
+    bottom: 12vh;
+  }
+
+  .prologue__caption {
+    bottom: 5.5rem;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .prologue__cue {
+    bottom: 5.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prologue {
+    height: auto;
+  }
+
+  .prologue__stage {
+    position: relative;
+  }
+
+  .prologue__aperture {
+    clip-path: none;
+  }
+}

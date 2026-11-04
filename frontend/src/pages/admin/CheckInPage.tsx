@@ -437,9 +437,10 @@ export default function CheckInPage() {
                     ) : null}
                   </div>
 
+                  {/* object-contain: en iOS object-cover desalinea el qrbox vs el frame decodificado */}
                   <div
                     id={scannerDivId}
-                    className="rounded-xl overflow-hidden min-h-[240px] sm:min-h-[280px] bg-black [&_video]:!object-cover [&_video]:!w-full [&_video]:!h-[240px] sm:[&_video]:!h-[280px]"
+                    className="rounded-xl overflow-hidden min-h-[300px] sm:min-h-[340px] bg-black [&_video]:!object-contain [&_video]:!w-full [&_video]:!max-h-[360px] [&_video]:!h-auto [&_img]:!object-contain"
                   />
 
                   {!scanning && !cameraError && (

@@ -1,0 +1,47 @@
+.bridge {
+  position: relative;
+  height: 240vh;
+  background: var(--frame);
+  color: var(--cream);
+}
+
+.bridge__stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 var(--gutter);
+}
+
+.bridge__kicker {
+  margin: 0 0 2rem;
+  color: var(--gold-soft);
+  padding-left: 0.4vw;
+}
+
+.bridge__title {
+  font-size: clamp(3.4rem, 10.5vw, 12rem);
+  max-width: 11ch;
+  color: var(--cream);
+}
+
+.bridge__word {
+  display: inline;
+}
+
+.bridge__title em {
+  color: var(--leaf);
+}
+
+.bridge--still {
+  height: auto;
+}
+
+.bridge--still .bridge__stage {
+  position: relative;
+  height: auto;
+  padding-block: 30vh;
+}

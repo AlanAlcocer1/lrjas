@@ -1,0 +1,211 @@
+.contribute {
+  background: var(--cream);
+  color: var(--ink);
+  padding: clamp(6rem, 16vh, 10rem) var(--gutter);
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: clamp(0.75rem, 2vw, 2rem);
+  row-gap: 3.5rem;
+  scroll-margin-top: 2rem;
+}
+
+.contribute__intro {
+  grid-column: 1 / span 5;
+  align-self: start;
+  position: sticky;
+  top: 14vh;
+}
+
+.contribute__eyebrow {
+  margin: 0 0 1.75rem;
+  color: var(--leaf-darker);
+}
+
+.contribute__title {
+  font-size: clamp(3.4rem, 7.5vw, 8rem);
+  max-width: 7ch;
+}
+
+.contribute__title em {
+  color: var(--leaf-darker);
+}
+
+.contribute__lead {
+  margin: 2rem 0 0;
+  max-width: 30ch;
+  font-size: 1.08rem;
+  line-height: 1.6;
+  color: var(--mist);
+}
+
+.contribute__form {
+  grid-column: 7 / span 6;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: clamp(1.5rem, 3vw, 2.75rem);
+  align-items: start;
+}
+
+/* El hueco de la foto: un cuadro vacío esperando su recuerdo */
+.contribute__photo {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 5;
+  background: var(--cream-deep);
+  border: 1px solid var(--leaf-dark);
+  cursor: pointer;
+  overflow: hidden;
+  transition: background-color 0.4s var(--ease-out);
+}
+
+.contribute__photo:hover {
+  background: var(--gold-soft);
+}
+
+.contribute__photo:focus-within {
+  outline: 2px solid var(--leaf);
+  outline-offset: 3px;
+}
+
+.contribute__photo-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem;
+  color: var(--leaf-darker);
+}
+
+.contribute__photo-cta {
+  font-size: clamp(1.7rem, 2.4vw, 2.4rem);
+  line-height: 1;
+  color: var(--ink);
+}
+
+.contribute__photo-hint {
+  color: var(--mist);
+}
+
+.contribute__preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.contribute__photo-change {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  padding: 0.55rem 0.8rem;
+  background: var(--frame);
+  color: var(--cream);
+}
+
+.contribute__fields {
+  display: grid;
+  gap: 1.6rem;
+}
+
+.contribute__field {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--leaf-darker);
+}
+
+.contribute__field input,
+.contribute__field textarea {
+  font: inherit;
+  font-family: var(--font-body);
+  font-size: 1.08rem;
+  padding: 0.55rem 0 0.6rem;
+  border: 0;
+  border-bottom: 1px solid var(--leaf-dark);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  resize: vertical;
+  transition: border-color 0.3s ease;
+}
+
+.contribute__field input::placeholder,
+.contribute__field textarea::placeholder {
+  color: var(--mist);
+  opacity: 0.7;
+}
+
+.contribute__field input:focus,
+.contribute__field textarea:focus {
+  outline: none;
+  border-bottom: 2px solid var(--leaf);
+  padding-bottom: calc(0.6rem - 1px);
+}
+
+.contribute__error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.95rem;
+}
+
+.contribute__ok {
+  margin: 0;
+  color: var(--leaf-darker);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.contribute__submit {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  padding: 1.1rem 1.25rem;
+  background: var(--leaf-darker);
+  color: var(--cream);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.contribute__submit span:last-child {
+  font-size: 1.1rem;
+  transition: transform 0.4s var(--ease-out);
+}
+
+.contribute__submit:hover:not(:disabled) {
+  background: var(--ink);
+}
+
+.contribute__submit:hover:not(:disabled) span:last-child {
+  transform: translateX(0.35rem);
+}
+
+.contribute__submit:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+@media (max-width: 1000px) {
+  .contribute {
+    display: block;
+  }
+
+  .contribute__intro {
+    position: static;
+    margin-bottom: 3.5rem;
+  }
+
+  .contribute__form {
+    grid-template-columns: 1fr;
+  }
+
+  .contribute__photo {
+    width: min(100%, 22rem);
+  }
+}

@@ -1,0 +1,37 @@
+.jump-bottom {
+  position: fixed;
+  z-index: 35;
+  right: max(var(--gutter), env(safe-area-inset-right, 0px));
+  bottom: calc(3.6rem + env(safe-area-inset-bottom, 0px));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.85rem 1.1rem;
+  border: 0;
+  border-radius: 0;
+  background: var(--leaf);
+  color: var(--frame);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(0.75rem);
+  pointer-events: none;
+  transition:
+    opacity 0.5s var(--ease-out),
+    transform 0.5s var(--ease-out),
+    background-color 0.3s ease;
+}
+
+.jump-bottom.is-visible {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.jump-bottom:hover {
+  background: var(--gold-soft);
+}
+
+.jump-bottom span {
+  font-family: var(--font-body);
+  font-size: 1rem;
+}

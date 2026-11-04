@@ -14,11 +14,14 @@ import { EventsModule } from './modules/events/events.module';
 import { ActividadesModule } from './modules/actividades/actividades.module';
 import { RaffleModule } from './modules/raffle/raffle.module';
 import { WalletPassesModule } from './modules/wallet-passes/wallet-passes.module';
+import { AnniversaryMemoriesModule } from './modules/anniversary-memories/anniversary-memories.module';
+import { StorageModule } from './modules/storage/storage.module';
 import { BootstrapService } from './bootstrap/bootstrap.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    StorageModule,
     PrismaModule,
     AuthModule,
     ParticipantsModule,
@@ -33,6 +36,7 @@ import { BootstrapService } from './bootstrap/bootstrap.service';
     ActividadesModule,
     RaffleModule,
     WalletPassesModule,
+    AnniversaryMemoriesModule,
   ],
   providers: [BootstrapService],
 })
