@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { afterBlocks, brand } from '@/content/capsule';
 import { ContributeForm } from '@/components/ContributeForm';
+import { BaileJas } from '@/components/BaileJas';
 import { ModerationPanel } from '@/components/ModerationPanel';
 import './AfterReel.css';
 
@@ -49,6 +50,8 @@ export function AfterReel({ onMemoryCreated, onMemoriesChanged }: Props) {
       </section>
 
       <ContributeForm onCreated={onMemoryCreated} />
+
+      <BaileJas />
 
       <footer className="credits" data-tone="dark" data-chapter="—" data-label="Créditos">
         <img src={brand.logo} alt={brand.name} className="credits__logo" />
