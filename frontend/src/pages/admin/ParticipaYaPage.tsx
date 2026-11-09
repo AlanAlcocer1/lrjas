@@ -225,8 +225,13 @@ export default function ParticipaYaPage() {
                   )}
                 </div>
 
+                {wa?.wasapUrl && (
+                  <p className="text-[11px] text-muted-foreground break-all">
+                    WASAP_URL: {wa.wasapUrl}
+                  </p>
+                )}
                 {wa?.lastError && !wa.connected && (
-                  <p className="text-xs text-destructive">{wa.lastError}</p>
+                  <p className="text-xs text-destructive whitespace-pre-wrap">{wa.lastError}</p>
                 )}
 
                 {qrDataUrl && (

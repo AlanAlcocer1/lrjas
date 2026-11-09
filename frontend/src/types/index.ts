@@ -309,6 +309,7 @@ export interface ParticipaYaWhatsappStatus {
   configured: boolean;
   connected: boolean;
   hasQr: boolean;
+  wasapUrl?: string | null;
   lastError: string | null;
   cronHint: string;
 }

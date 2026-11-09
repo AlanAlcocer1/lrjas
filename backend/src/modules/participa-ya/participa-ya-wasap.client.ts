@@ -50,11 +50,13 @@ export class ParticipaYaWasapClient {
           'Content-Type': 'application/json',
         },
         body: body === undefined ? undefined : JSON.stringify(body),
+        signal: AbortSignal.timeout(8_000),
       });
     } catch (err) {
-      this.logger.warn(`wasap unreachable: ${(err as Error).message}`);
+      const cause = (err as Error).message || String(err);
+      this.logger.warn(`wasap unreachable ${url}: ${cause}`);
       throw new ServiceUnavailableException(
-        'No se pudo contactar el servicio WhatsApp',
+        `No se pudo contactar wasap en ${base} (${cause}). ¿Está el contenedor wasap arriba en la misma red Docker?`,
       );
     }
 
@@ -90,5 +92,9 @@ export class ParticipaYaWasapClient {
 
   configured(): boolean {
     return Boolean(this.baseUrl() && this.token());
+  }
+
+  configuredUrl(): string | null {
+    return this.baseUrl();
   }
 }

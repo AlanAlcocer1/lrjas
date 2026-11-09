@@ -74,7 +74,10 @@ services:
     build:
       context: ./wasap
       dockerfile: Dockerfile
+    # Sin container_name: Coolify ignora/override y el DNS interno es el service name `wasap`.
     restart: unless-stopped
+    # Chromium/Puppeteer necesita shm; sin esto a veces muere al arrancar.
+    shm_size: '256mb'
     environment:
       PORT: 3100
       WASAP_INTERNAL_TOKEN: ${WASAP_INTERNAL_TOKEN:?Define WASAP_INTERNAL_TOKEN}

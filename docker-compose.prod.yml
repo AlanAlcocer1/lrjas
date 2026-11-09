@@ -61,6 +61,7 @@ services:
       dockerfile: Dockerfile
     container_name: lrjas-wasap
     restart: unless-stopped
+    shm_size: '256mb'
     environment:
       PORT: 3100
       WASAP_INTERNAL_TOKEN: ${WASAP_INTERNAL_TOKEN:?Define WASAP_INTERNAL_TOKEN en .env}
