@@ -181,12 +181,12 @@ export class ParticipaYaService implements OnModuleInit, OnModuleDestroy {
     }
 
     const lines = entries.map(
-      (e) => `${e.rank}. ${e.name} (${e.code}) ----- ${e.score}`,
+      (e) => `${e.rank}. ${e.name} (${e.code}) · ${e.score}`,
     );
     return [
       intro + lines.join('\n'),
       '',
-      '¿Quieres subir? Sigue sumando nombres y revisa el ranking en lrjasmerida.me 💪',
+      '¿Quieres subir? Sigue sumando nombres y mira el ranking en lrjasmerida.me',
     ].join('\n');
   }
 
