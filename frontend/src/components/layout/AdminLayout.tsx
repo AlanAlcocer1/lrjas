@@ -14,6 +14,7 @@ import {
   CalendarDays,
   Ticket,
   WalletCards,
+  Trophy,
 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,6 +31,7 @@ const baseNavItems = [
   { to: '/admin/check-in', icon: ScanLine, label: 'Check-in' },
   { to: '/admin/attendance-today', icon: CalendarCheck, label: 'Asistencias' },
   { to: '/admin/boletos', icon: Ticket, label: 'Boletos' },
+  { to: '/admin/participa-ya', icon: Trophy, label: 'Participa Ya' },
   { to: '/admin/pases', icon: WalletCards, label: 'Pases Wallet' },
   { to: '/admin/stakes', icon: MapPin, label: 'Estacas' },
   { to: '/admin/events', icon: CalendarDays, label: 'Eventos' },

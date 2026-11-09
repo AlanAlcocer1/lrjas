@@ -18,10 +18,14 @@ import type {
   EventItem,
   RaffleDrawResult,
   RaffleLookupResult,
+  RaffleBulkResult,
   RaffleTicket,
   WalletPassAdminItem,
   WalletPassCreateResult,
   WalletPassLookupResult,
+  ParticipaYaRanking,
+  ParticipaYaEntry,
+  ParticipaYaWhatsappStatus,
 } from '@/types';
 
 const api = axios.create({
@@ -156,6 +160,10 @@ export const socialApi = {
 export const raffleApi = {
   create: (code: string) =>
     api.post<RaffleTicket>('/raffle-tickets', { code }).then((r) => r.data),
+  createBulk: (codes: string[], quantity: number) =>
+    api
+      .post<RaffleBulkResult>('/raffle-tickets/bulk', { codes, quantity })
+      .then((r) => r.data),
   lookup: (code: string) =>
     api.get<RaffleLookupResult>(`/raffle-tickets/lookup/${encodeURIComponent(code)}`).then((r) => r.data),
   recent: (opts?: { limit?: number; code?: string; date?: string }) =>
@@ -193,6 +201,33 @@ export const walletPassesApi = {
   create: (code: string) =>
     api
       .post<WalletPassCreateResult>(`/wallet-passes/code/${encodeURIComponent(code)}`)
+      .then((r) => r.data),
+};
+
+export const participaYaApi = {
+  ranking: (limit = 50) =>
+    api
+      .get<ParticipaYaRanking>('/participa-ya/ranking', { params: { limit } })
+      .then((r) => r.data),
+  listEntries: () =>
+    api.get<ParticipaYaRanking>('/participa-ya/entries').then((r) => r.data),
+  upsertEntry: (code: string, score: number) =>
+    api
+      .put<Omit<ParticipaYaEntry, 'rank'>>('/participa-ya/entries', { code, score })
+      .then((r) => r.data),
+  removeEntry: (id: string) =>
+    api.delete<{ ok: boolean }>(`/participa-ya/entries/${id}`).then((r) => r.data),
+  whatsappStatus: () =>
+    api
+      .get<ParticipaYaWhatsappStatus>('/participa-ya/whatsapp/status')
+      .then((r) => r.data),
+  whatsappQr: () =>
+    api
+      .get<{ qr: string | null; dataUrl: string | null }>('/participa-ya/whatsapp/qr')
+      .then((r) => r.data),
+  sendRankingNow: () =>
+    api
+      .post<{ ok: boolean; message: string }>('/participa-ya/whatsapp/send-now')
       .then((r) => r.data),
 };
 

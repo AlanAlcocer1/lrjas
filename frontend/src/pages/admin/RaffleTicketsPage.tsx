@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Ticket,
@@ -24,19 +24,37 @@ import { RaffleTombolaDialog } from '@/components/raffle/RaffleTombolaDialog';
 import { getApiErrorMessage, raffleApi } from '@/services/api';
 import { formatDate, formatTime } from '@/lib/utils';
 import { mexicoDateKey } from '@/lib/mexico-time';
-import type { RaffleTicket } from '@/types';
+import type { RaffleBulkResult, RaffleTicket } from '@/types';
+
+function parseCodes(raw: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.toUpperCase().split(/[\s,;]+/)) {
+    const code = part.trim();
+    if (!code || seen.has(code)) continue;
+    seen.add(code);
+    out.push(code);
+  }
+  return out;
+}
 
 export default function RaffleTicketsPage() {
-  const [code, setCode] = useState('');
+  const [codesText, setCodesText] = useState('');
+  const [quantity, setQuantity] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [loadingList, setLoadingList] = useState(false);
   const [lastTicket, setLastTicket] = useState<RaffleTicket | null>(null);
+  const [lastBulk, setLastBulk] = useState<RaffleBulkResult | null>(null);
   const [recent, setRecent] = useState<RaffleTicket[]>([]);
   const [ticketToDelete, setTicketToDelete] = useState<RaffleTicket | null>(null);
   const [filterCode, setFilterCode] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [tombolaOpen, setTombolaOpen] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const parsedCodes = useMemo(() => parseCodes(codesText), [codesText]);
+  const qty = Math.min(50, Math.max(1, Number(quantity) || 1));
+  const previewTotal = parsedCodes.length * qty;
 
   const loadRecent = useCallback(async () => {
     setLoadingList(true);
@@ -60,19 +78,25 @@ export default function RaffleTicketsPage() {
   }, [loadRecent]);
 
   const generate = async () => {
-    const trimmed = code.trim().toUpperCase();
-    if (!trimmed) return;
+    const codes = parseCodes(codesText);
+    if (codes.length === 0) return;
     setSubmitting(true);
     try {
-      const ticket = await raffleApi.create(trimmed);
-      setLastTicket(ticket);
-      setCode('');
-      toast.success(`Boleto ${ticket.folioLabel} generado`);
+      const result = await raffleApi.createBulk(codes, qty);
+      setLastBulk(result);
+      setLastTicket(result.tickets[result.tickets.length - 1] ?? null);
+      setCodesText('');
+      toast.success(
+        result.created === 1
+          ? `Boleto #${result.tickets[0]?.folioLabel} generado`
+          : `${result.created} boletos generados (${result.codes} código${result.codes === 1 ? '' : 's'} × ${result.quantityPerCode})`,
+      );
       await loadRecent();
       inputRef.current?.focus();
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'No se pudo generar el boleto'));
       setLastTicket(null);
+      setLastBulk(null);
     } finally {
       setSubmitting(false);
     }
@@ -108,7 +132,7 @@ export default function RaffleTicketsPage() {
               <div>
                 <h1 className="text-2xl font-bold mb-1">Boletos de rifa</h1>
                 <p className="text-sm text-muted-foreground">
-                  Ingresa el código del usuario para generar un boleto foliado por asistencia
+                  Uno o varios códigos y cuántos boletos darle a cada uno
                 </p>
               </div>
               <Button
@@ -126,21 +150,48 @@ export default function RaffleTicketsPage() {
           <FadeIn delay={0.05}>
             <Card>
               <CardContent className="p-5 space-y-4">
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="raffle-codes" className="text-xs text-muted-foreground">
+                      Códigos (uno o varios, separados por espacio, coma o Enter)
+                    </Label>
+                    <textarea
                       ref={inputRef}
-                      placeholder="Código del usuario"
-                      value={code}
-                      onChange={(e) => setCode(e.target.value.toUpperCase())}
-                      onKeyDown={(e) => e.key === 'Enter' && generate()}
-                      className="pl-9 text-base uppercase tracking-wider"
+                      id="raffle-codes"
+                      placeholder={'001\n002\n015'}
+                      value={codesText}
+                      onChange={(e) => setCodesText(e.target.value.toUpperCase())}
+                      className="flex min-h-[5.5rem] w-full rounded-md border border-input bg-background px-3 py-2 text-base uppercase tracking-wider ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       autoComplete="off"
                       autoFocus
                     />
                   </div>
-                  <Button onClick={generate} disabled={submitting || !code.trim()} className="gap-2">
+                  <div className="space-y-1.5 sm:w-36">
+                    <Label htmlFor="raffle-qty" className="text-xs text-muted-foreground">
+                      Boletos c/u
+                    </Label>
+                    <Input
+                      id="raffle-qty"
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={quantity}
+                      onChange={(e) => setQuantity(Number(e.target.value) || 1)}
+                      className="tabular-nums"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    {parsedCodes.length === 0
+                      ? 'Escribe al menos un código'
+                      : `${parsedCodes.length} código${parsedCodes.length === 1 ? '' : 's'} × ${qty} = ${previewTotal} boleto${previewTotal === 1 ? '' : 's'}`}
+                  </p>
+                  <Button
+                    onClick={() => void generate()}
+                    disabled={submitting || parsedCodes.length === 0 || previewTotal > 500}
+                    className="gap-2"
+                  >
                     {submitting ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
@@ -154,9 +205,9 @@ export default function RaffleTicketsPage() {
           </FadeIn>
 
           <AnimatePresence mode="wait">
-            {lastTicket && (
+            {lastBulk && (
               <motion.div
-                key={lastTicket.id}
+                key={`bulk-${lastBulk.tickets[0]?.id ?? 'ok'}-${lastBulk.created}`}
                 initial={{ opacity: 0, y: 8, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0 }}
@@ -169,15 +220,21 @@ export default function RaffleTicketsPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs uppercase tracking-widest text-leaf-dark font-medium mb-1">
-                          Boleto generado
+                          Boletos generados
                         </p>
                         <p className="text-3xl font-bold tabular-nums tracking-tight text-leaf-darker">
-                          #{lastTicket.folioLabel}
+                          {lastBulk.created}
                         </p>
-                        <p className="font-medium mt-2 truncate">{lastTicket.participant.fullName}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Código {lastTicket.participant.code}
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {lastBulk.codes} código{lastBulk.codes === 1 ? '' : 's'} ×{' '}
+                          {lastBulk.quantityPerCode} boleto
+                          {lastBulk.quantityPerCode === 1 ? '' : 's'} c/u
                         </p>
+                        {lastTicket && (
+                          <p className="text-sm text-muted-foreground mt-1 truncate">
+                            Último: #{lastTicket.folioLabel} · {lastTicket.participant.fullName}
+                          </p>
+                        )}
                       </div>
                       <Badge className="bg-leaf/15 text-leaf-darker border-leaf/30">Nuevo</Badge>
                     </div>
@@ -269,6 +326,9 @@ export default function RaffleTicketsPage() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{t.participant.fullName}</p>
                         <p className="text-xs text-muted-foreground">{t.participant.code}</p>
+                        <p className="text-xs text-muted-foreground/80 truncate mt-0.5">
+                          Por {t.createdBy?.name || t.createdBy?.username || 'desconocido'}
+                        </p>
                       </div>
                       <div className="text-right text-xs text-muted-foreground shrink-0">
                         <p>{formatDate(t.createdAt)}</p>

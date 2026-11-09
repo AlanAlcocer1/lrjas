@@ -15,6 +15,7 @@ import { ActividadesModule } from './modules/actividades/actividades.module';
 import { RaffleModule } from './modules/raffle/raffle.module';
 import { WalletPassesModule } from './modules/wallet-passes/wallet-passes.module';
 import { AnniversaryMemoriesModule } from './modules/anniversary-memories/anniversary-memories.module';
+import { ParticipaYaModule } from './modules/participa-ya/participa-ya.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { BootstrapService } from './bootstrap/bootstrap.service';
 
@@ -37,6 +38,7 @@ import { BootstrapService } from './bootstrap/bootstrap.service';
     RaffleModule,
     WalletPassesModule,
     AnniversaryMemoriesModule,
+    ParticipaYaModule,
   ],
   providers: [BootstrapService],
 })

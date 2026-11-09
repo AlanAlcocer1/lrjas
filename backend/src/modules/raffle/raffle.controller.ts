@@ -1,7 +1,23 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { RaffleService } from './raffle.service';
-import { CreateRaffleTicketDto, DrawRaffleDto } from './dto/raffle.dto';
+import {
+  CreateRaffleTicketDto,
+  CreateRaffleTicketsBulkDto,
+  DrawRaffleDto,
+} from './dto/raffle.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
+type AuthUser = { id: string; username: string; name: string };
 
 @Controller('raffle-tickets')
 export class RaffleController {
@@ -45,8 +61,14 @@ export class RaffleController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  create(@Body() dto: CreateRaffleTicketDto) {
-    return this.raffleService.create(dto);
+  create(@Body() dto: CreateRaffleTicketDto, @Req() req: { user: AuthUser }) {
+    return this.raffleService.create(dto, req.user.id);
+  }
+
+  @Post('bulk')
+  @UseGuards(JwtAuthGuard)
+  createBulk(@Body() dto: CreateRaffleTicketsBulkDto, @Req() req: { user: AuthUser }) {
+    return this.raffleService.createBulk(dto, req.user.id);
   }
 
   @Delete(':id')

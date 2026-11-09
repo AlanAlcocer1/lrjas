@@ -46,9 +46,29 @@ services:
       R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
       R2_PREFIX: ${R2_PREFIX:-}
       WEBP_QUALITY: ${WEBP_QUALITY:-85}
+      WASAP_URL: ${WASAP_URL:-http://lrjas-wasap:3100}
+      WASAP_INTERNAL_TOKEN: ${WASAP_INTERNAL_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - lrjas
+
+  wasap:
+    build:
+      context: ./wasap
+      dockerfile: Dockerfile
+    container_name: lrjas-wasap
+    restart: unless-stopped
+    environment:
+      PORT: 3100
+      WASAP_INTERNAL_TOKEN: ${WASAP_INTERNAL_TOKEN:?Define WASAP_INTERNAL_TOKEN en .env}
+      # Canal hardcodeado en wasap; opcional override:
+      # CHANNEL_ID: ${WASAP_CHANNEL_ID:-}
+      CHROME_PATH: /usr/bin/chromium
+      WWEBJS_AUTH_PATH: /data/wwebjs_auth
+    volumes:
+      - wasap_auth:/data
     networks:
       - lrjas
 
@@ -88,6 +108,7 @@ services:
 
 volumes:
   postgres_data:
+  wasap_auth:
 
 networks:
   lrjas:
