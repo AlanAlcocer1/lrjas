@@ -63,6 +63,19 @@ app.post('/send', auth, async (req, res) => {
   }
 });
 
+app.post('/reconnect', auth, async (_req, res) => {
+  try {
+    await session.reconnect();
+    return res.json({ ok: true, ...session.getStatus() });
+  } catch (err) {
+    return res.status(503).json({
+      ok: false,
+      message: err.message || String(err),
+      ...session.getStatus(),
+    });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`lrjas-wasap listening on 0.0.0.0:${PORT}`);
   session.start().catch((err) => {

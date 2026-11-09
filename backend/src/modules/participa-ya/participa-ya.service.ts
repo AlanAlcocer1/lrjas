@@ -229,6 +229,32 @@ export class ParticipaYaService implements OnModuleInit, OnModuleDestroy {
     return this.wasap.qr();
   }
 
+  async whatsappReconnect() {
+    try {
+      const s = await this.wasap.reconnect();
+      return {
+        configured: true,
+        wasapUrl: this.wasap.configuredUrl(),
+        connected: Boolean(s.connected),
+        hasQr: Boolean(s.hasQr),
+        lastError: s.lastError ?? null,
+        cronHint: this.cronHint(),
+      };
+    } catch (err) {
+      const http = err as { message?: string | string[]; response?: { message?: string | string[] } };
+      const raw = http.response?.message ?? http.message ?? (err as Error).message;
+      const lastError = Array.isArray(raw) ? raw.join(', ') : String(raw);
+      return {
+        configured: true,
+        wasapUrl: this.wasap.configuredUrl(),
+        connected: false,
+        hasQr: false,
+        lastError,
+        cronHint: this.cronHint(),
+      };
+    }
+  }
+
   async sendNow() {
     const message = await this.buildRankingMessage(10);
     await this.wasap.send(message);

@@ -44,29 +44,53 @@ function getAuthPath() {
 }
 
 /**
- * Tras recrear el contenedor, Chromium deja SingletonLock del hostname viejo
- * y Puppeteer falla con "profile appears to be in use" / "Can't open display".
+ * Coolify/redeploy cambia el container id; Chromium deja Singleton* del host viejo
+ * y Puppeteer muere con Code 21 / "Can't open display".
+ * No borra la sesión (LocalAuth); solo los locks.
  */
 export function clearChromiumProfileLocks(authPath = getAuthPath()) {
-  const roots = [
-    authPath,
-    path.join(authPath, 'session'),
-    path.join(authPath, 'session', 'Default'),
-  ];
-  const lockNames = ['SingletonLock', 'SingletonCookie', 'SingletonSocket'];
-  for (const root of roots) {
-    for (const name of lockNames) {
-      const file = path.join(root, name);
+  if (!fs.existsSync(authPath)) return;
+
+  const lockNames = new Set([
+    'SingletonLock',
+    'SingletonCookie',
+    'SingletonSocket',
+  ]);
+
+  const walk = (dir) => {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const ent of entries) {
+      const full = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!lockNames.has(ent.name)) continue;
       try {
-        if (fs.existsSync(file)) {
-          fs.unlinkSync(file);
-          console.log(`[wasap] lock removido: ${file}`);
-        }
+        fs.unlinkSync(full);
+        console.log(`[wasap] lock removido: ${full}`);
       } catch (err) {
-        console.warn(`[wasap] no se pudo borrar ${file}:`, err.message || err);
+        console.warn(`[wasap] no se pudo borrar ${full}:`, err.message || err);
       }
     }
-  }
+  };
+
+  walk(authPath);
+}
+
+function isProfileLockError(err) {
+  const msg = String(err?.message || err || '');
+  return (
+    msg.includes('Code: 21') ||
+    msg.includes('profile appears to be in use') ||
+    msg.includes("Can't open display") ||
+    msg.includes('SingletonLock')
+  );
 }
 
 export function createClient() {
@@ -91,8 +115,6 @@ export function createClient() {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--headless=new',
-        '--no-zygote',
-        '--single-process',
       ],
     },
   });
@@ -110,64 +132,79 @@ export function createSession() {
     readyPromise: null,
   };
 
-  function start() {
-    if (state.readyPromise) return state.readyPromise;
+  async function destroyClientQuiet() {
+    const client = state.client;
+    state.client = null;
+    state.connected = false;
+    state.readyPromise = null;
+    if (!client) return;
+    try {
+      await client.destroy();
+    } catch {
+      /* ignore */
+    }
+  }
 
-    state.readyPromise = new Promise((resolve, reject) => {
+  function attachHandlers(client, resolve, reject) {
+    client.on('qr', (qr) => {
+      state.qr = qr;
+      state.connected = false;
+      state.lastError = null;
+      console.log('[wasap] QR listo para escanear (GET /qr)');
+    });
+
+    client.on('authenticated', () => {
+      console.log('[wasap] Autenticado. Guardando sesión…');
+    });
+
+    client.on('auth_failure', (msg) => {
+      state.connected = false;
+      state.lastError = `Fallo de autenticación: ${msg}`;
+      console.error('[wasap]', state.lastError);
+    });
+
+    client.on('ready', async () => {
+      try {
+        await client.pupPage.evaluate(() => {
+          const MsgClass = window.require('WAWebCollections').Msg.modelClass;
+          if (typeof MsgClass.prototype.avParams === 'function') return;
+          MsgClass.prototype.avParams = function avParams() {
+            return window.require('WAWebMediaMetadata').mediaMetadata(this);
+          };
+        });
+      } catch (err) {
+        console.warn('[wasap] polyfill avParams:', err.message || err);
+      }
+
+      state.connected = true;
+      state.qr = null;
+      state.lastError = null;
+      console.log('[wasap] WhatsApp listo.');
+      resolve(client);
+    });
+
+    client.on('disconnected', (reason) => {
+      state.connected = false;
+      state.lastError = `Desconectado: ${reason}`;
+      state.readyPromise = null;
+      console.warn('[wasap]', state.lastError);
+    });
+  }
+
+  function startOnce() {
+    return new Promise((resolve, reject) => {
       let client;
       try {
         client = createClient();
       } catch (err) {
         state.lastError = err.message || String(err);
+        state.readyPromise = null;
         reject(err);
         return;
       }
 
       state.client = client;
-
-      client.on('qr', (qr) => {
-        state.qr = qr;
-        state.connected = false;
-        state.lastError = null;
-        console.log('[wasap] QR listo para escanear (GET /qr)');
-      });
-
-      client.on('authenticated', () => {
-        console.log('[wasap] Autenticado. Guardando sesión…');
-      });
-
-      client.on('auth_failure', (msg) => {
-        state.connected = false;
-        state.lastError = `Fallo de autenticación: ${msg}`;
-        console.error('[wasap]', state.lastError);
-      });
-
-      client.on('ready', async () => {
-        try {
-          await client.pupPage.evaluate(() => {
-            const MsgClass = window.require('WAWebCollections').Msg.modelClass;
-            if (typeof MsgClass.prototype.avParams === 'function') return;
-            MsgClass.prototype.avParams = function avParams() {
-              return window.require('WAWebMediaMetadata').mediaMetadata(this);
-            };
-          });
-        } catch (err) {
-          console.warn('[wasap] polyfill avParams:', err.message || err);
-        }
-
-        state.connected = true;
-        state.qr = null;
-        state.lastError = null;
-        console.log('[wasap] WhatsApp listo.');
-        resolve(client);
-      });
-
-      client.on('disconnected', (reason) => {
-        state.connected = false;
-        state.lastError = `Desconectado: ${reason}`;
-        state.readyPromise = null;
-        console.warn('[wasap]', state.lastError);
-      });
+      attachHandlers(client, resolve, reject);
 
       client.initialize().catch((err) => {
         state.lastError = err.message || String(err);
@@ -175,8 +212,44 @@ export function createSession() {
         reject(err);
       });
     });
+  }
+
+  function start() {
+    if (state.readyPromise) return state.readyPromise;
+
+    state.readyPromise = (async () => {
+      try {
+        return await startOnce();
+      } catch (err) {
+        if (!isProfileLockError(err)) throw err;
+
+        console.warn(
+          '[wasap] lock de Chromium detectado; limpiando e reintentando…',
+        );
+        await destroyClientQuiet();
+        clearChromiumProfileLocks();
+        await new Promise((r) => setTimeout(r, 800));
+        state.readyPromise = null;
+        state.readyPromise = startOnce();
+        return state.readyPromise;
+      }
+    })();
+
+    state.readyPromise = state.readyPromise.catch((err) => {
+      state.readyPromise = null;
+      throw err;
+    });
 
     return state.readyPromise;
+  }
+
+  /** Fuerza reinicio del cliente (limpia locks). Útil tras redeploy Coolify. */
+  async function reconnect() {
+    await destroyClientQuiet();
+    clearChromiumProfileLocks();
+    state.qr = null;
+    state.lastError = null;
+    return start();
   }
 
   async function sendToChannel(message) {
@@ -205,6 +278,7 @@ export function createSession() {
   return {
     state,
     start,
+    reconnect,
     sendToChannel,
     getStatus: () => ({
       connected: state.connected,
