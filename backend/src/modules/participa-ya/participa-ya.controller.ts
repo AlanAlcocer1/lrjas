@@ -57,6 +57,12 @@ export class ParticipaYaController {
     return this.service.whatsappQr();
   }
 
+  @Post('whatsapp/reconnect')
+  @UseGuards(JwtAuthGuard)
+  reconnect() {
+    return this.service.whatsappReconnect();
+  }
+
   @Post('whatsapp/send-now')
   @UseGuards(JwtAuthGuard)
   sendNow() {

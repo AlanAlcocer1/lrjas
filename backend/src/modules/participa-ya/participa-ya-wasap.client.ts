@@ -90,6 +90,10 @@ export class ParticipaYaWasapClient {
     return this.request('POST', '/send', { message });
   }
 
+  reconnect(): Promise<WasapStatus & { ok?: boolean }> {
+    return this.request('POST', '/reconnect');
+  }
+
   configured(): boolean {
     return Boolean(this.baseUrl() && this.token());
   }

@@ -218,9 +218,9 @@ export default function ParticipaYaPage() {
                       Conectado
                     </Badge>
                   ) : (
-                    <Badge variant="secondary" className="gap-1">
+                    <Badge variant="secondary" className="gap-1 shrink-0">
                       <WifiOff className="h-3 w-3" />
-                      {wa?.hasQr ? 'Escanea QR' : 'Desconectado'}
+                      {wa?.hasQr ? 'Pendiente de vincular' : 'Desconectado'}
                     </Badge>
                   )}
                 </div>
@@ -233,13 +233,19 @@ export default function ParticipaYaPage() {
                 {wa?.lastError && !wa.connected && (
                   <p className="text-xs text-destructive whitespace-pre-wrap">{wa.lastError}</p>
                 )}
+                {!wa?.connected && !qrDataUrl && (
+                  <p className="text-xs text-muted-foreground">
+                    Si acabas de redeployar Coolify, limpia el lock de Chromium o pulsa
+                    Reconectar. El envío solo funciona con estado Conectado.
+                  </p>
+                )}
 
                 {qrDataUrl && (
                   <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-leaf/30 bg-leaf/5 p-4">
                     <img
                       src={qrDataUrl}
-                      alt="QR para vincular WhatsApp"
-                      className="h-56 w-56 rounded-lg bg-white p-2"
+                      alt="Código QR de WhatsApp"
+                      className="h-64 w-64 max-w-full rounded-lg bg-white p-2 object-contain"
                     />
                     <p className="text-xs text-center text-muted-foreground max-w-xs">
                       WhatsApp → Dispositivos vinculados → Vincular dispositivo
@@ -251,6 +257,31 @@ export default function ParticipaYaPage() {
                   <Button variant="outline" size="sm" onClick={loadWhatsapp} className="gap-2">
                     <RefreshCw className="h-3.5 w-3.5" />
                     Actualizar estado
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        toast.message('Reconectando WhatsApp…');
+                        const s = await participaYaApi.whatsappReconnect();
+                        setWa(s);
+                        if (s.hasQr && !s.connected) {
+                          const qr = await participaYaApi.whatsappQr();
+                          setQrDataUrl(qr.dataUrl);
+                        } else {
+                          setQrDataUrl(null);
+                        }
+                        toast.success(
+                          s.connected ? 'WhatsApp conectado' : 'Listo: revisa el QR',
+                        );
+                      } catch (err) {
+                        toast.error(getApiErrorMessage(err, 'No se pudo reconectar'));
+                      }
+                    }}
+                    className="gap-2"
+                  >
+                    Reconectar
                   </Button>
                   <Button
                     size="sm"
