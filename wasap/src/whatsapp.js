@@ -36,6 +36,39 @@ export function getChannelId() {
   return process.env.CHANNEL_ID?.trim() || DEFAULT_CHANNEL_ID;
 }
 
+function getAuthPath() {
+  return (
+    process.env.WWEBJS_AUTH_PATH?.trim() ||
+    path.join(projectRoot, '.wwebjs_auth')
+  );
+}
+
+/**
+ * Tras recrear el contenedor, Chromium deja SingletonLock del hostname viejo
+ * y Puppeteer falla con "profile appears to be in use" / "Can't open display".
+ */
+export function clearChromiumProfileLocks(authPath = getAuthPath()) {
+  const roots = [
+    authPath,
+    path.join(authPath, 'session'),
+    path.join(authPath, 'session', 'Default'),
+  ];
+  const lockNames = ['SingletonLock', 'SingletonCookie', 'SingletonSocket'];
+  for (const root of roots) {
+    for (const name of lockNames) {
+      const file = path.join(root, name);
+      try {
+        if (fs.existsSync(file)) {
+          fs.unlinkSync(file);
+          console.log(`[wasap] lock removido: ${file}`);
+        }
+      } catch (err) {
+        console.warn(`[wasap] no se pudo borrar ${file}:`, err.message || err);
+      }
+    }
+  }
+}
+
 export function createClient() {
   const executablePath = resolveBrowserPath();
   if (!executablePath) {
@@ -44,9 +77,8 @@ export function createClient() {
     );
   }
 
-  const authPath =
-    process.env.WWEBJS_AUTH_PATH?.trim() ||
-    path.join(projectRoot, '.wwebjs_auth');
+  const authPath = getAuthPath();
+  clearChromiumProfileLocks(authPath);
 
   return new Client({
     authStrategy: new LocalAuth({ dataPath: authPath }),
@@ -58,6 +90,9 @@ export function createClient() {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
+        '--headless=new',
+        '--no-zygote',
+        '--single-process',
       ],
     },
   });
