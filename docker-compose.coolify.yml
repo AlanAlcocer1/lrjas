@@ -59,6 +59,9 @@ services:
       WALLET_PASS_LOGO_URL: ${WALLET_PASS_LOGO_URL:-}
       WALLET_PASS_WIDE_LOGO_URL: ${WALLET_PASS_WIDE_LOGO_URL:-}
       WALLET_PASS_ICON_URL: ${WALLET_PASS_ICON_URL:-}
+      # Participa Ya → servicio wasap (misma red Docker)
+      WASAP_URL: ${WASAP_URL:-http://wasap:3100}
+      WASAP_INTERNAL_TOKEN: ${WASAP_INTERNAL_TOKEN:-}
     expose:
       - '3001'
     depends_on:
@@ -67,8 +70,26 @@ services:
     networks:
       - lrjas
 
+  wasap:
+    build:
+      context: ./wasap
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 3100
+      WASAP_INTERNAL_TOKEN: ${WASAP_INTERNAL_TOKEN:?Define WASAP_INTERNAL_TOKEN}
+      CHROME_PATH: /usr/bin/chromium
+      WWEBJS_AUTH_PATH: /data/wwebjs_auth
+    volumes:
+      - wasap_auth:/data
+    expose:
+      - '3100'
+    networks:
+      - lrjas
+
 volumes:
   postgres_data:
+  wasap_auth:
 
 networks:
   lrjas:

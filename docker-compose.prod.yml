@@ -46,6 +46,7 @@ services:
       R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
       R2_PREFIX: ${R2_PREFIX:-}
       WEBP_QUALITY: ${WEBP_QUALITY:-85}
+      # Hostname = container_name. Si usas Coolify, mira docker-compose.coolify.yml (http://wasap:3100).
       WASAP_URL: ${WASAP_URL:-http://lrjas-wasap:3100}
       WASAP_INTERNAL_TOKEN: ${WASAP_INTERNAL_TOKEN:-}
     depends_on:
