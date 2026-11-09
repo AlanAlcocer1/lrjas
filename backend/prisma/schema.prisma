@@ -70,13 +70,15 @@ enum RecurrenceType {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  password  String
-  name      String
-  role      Role     @default(ADMIN)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                   String         @id @default(uuid())
+  username             String         @unique
+  password             String
+  name                 String
+  role                 Role           @default(ADMIN)
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+  raffleTicketsCreated RaffleTicket[]
+  participaYaUpdated   ParticipaYaEntry[]
 
   @@map("users")
 }
@@ -143,6 +145,7 @@ model Participant {
   attendances    Attendance[]
   raffleTickets  RaffleTicket[]
   walletPass     WalletPass?
+  participaYa    ParticipaYaEntry?
 
   // Actividades / RBAC
   accessRoles              ParticipantAccessRole[]
@@ -201,16 +204,36 @@ model Event {
   @@map("events")
 }
 
+/// Ranking del concurso Participa Ya (total de nombres por participante).
+model ParticipaYaEntry {
+  id            String      @id @default(uuid())
+  participantId String      @unique @map("participant_id")
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  score         Int         @default(0)
+  updatedById   String?     @map("updated_by_id")
+  updatedBy     User?       @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@index([score])
+  @@index([updatedAt])
+  @@map("participa_ya_entries")
+}
+
 /// Boletos de rifa por asistencia. Folio consecutivo (1 → "00001").
 model RaffleTicket {
   id            String      @id @default(uuid())
   folio         Int         @unique @default(autoincrement())
   participantId String      @map("participant_id")
   participant   Participant @relation(fields: [participantId], references: [id])
+  /// Admin que generó el boleto (auditoría).
+  createdById   String?     @map("created_by_id")
+  createdBy     User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
   createdAt     DateTime    @default(now()) @map("created_at")
 
   @@index([participantId])
   @@index([createdAt])
+  @@index([createdById])
   @@map("raffle_tickets")
 }
 

@@ -18,6 +18,7 @@ import SocialPostsPage from '@/pages/admin/SocialPostsPage';
 import EventsPage from '@/pages/admin/EventsPage';
 import RaffleTicketsPage from '@/pages/admin/RaffleTicketsPage';
 import WalletPassesPage from '@/pages/admin/WalletPassesPage';
+import ParticipaYaPage from '@/pages/admin/ParticipaYaPage';
 import RaffleLookupPage from '@/pages/RaffleLookupPage';
 
 export default function App() {
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/admin/attendance-today" element={<AttendanceTodayPage />} />
           <Route path="/admin/boletos" element={<RaffleTicketsPage />} />
           <Route path="/admin/pases" element={<WalletPassesPage />} />
+          <Route path="/admin/participa-ya" element={<ParticipaYaPage />} />
           <Route path="/admin/users" element={<UsersPage />} />
           <Route path="/admin/fields" element={<FieldsPage />} />
           <Route path="/admin/events" element={<EventsPage />} />

@@ -1,14 +1,37 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { UserPlus, QrCode, Shield, ArrowRight, Sparkles, Ticket } from 'lucide-react';
+import {
+  UserPlus,
+  QrCode,
+  Shield,
+  ArrowRight,
+  Sparkles,
+  Ticket,
+  Trophy,
+} from 'lucide-react';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { PageTransition, FadeIn } from '@/components/layout/PageTransition';
 import { Logo } from '@/components/brand/Logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/badge';
 import { APP_DESCRIPTION } from '@/config/api';
+import { participaYaApi } from '@/services/api';
+import type { ParticipaYaRanking } from '@/types';
 
 export default function HomePage() {
+  const [ranking, setRanking] = useState<ParticipaYaRanking | null>(null);
+  const [rankingLoading, setRankingLoading] = useState(true);
+
+  useEffect(() => {
+    participaYaApi
+      .ranking(20)
+      .then(setRanking)
+      .catch(() => setRanking(null))
+      .finally(() => setRankingLoading(false));
+  }, []);
+
   return (
     <PublicLayout>
       <PageTransition>
@@ -37,6 +60,66 @@ export default function HomePage() {
                 personal.
               </p>
             </div>
+          </FadeIn>
+
+          <FadeIn delay={0.12}>
+            <section className="space-y-3">
+              <div className="flex items-center justify-between gap-2 px-0.5">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-leaf-dark" />
+                  <h2 className="font-semibold text-sm sm:text-base">Participa Ya</h2>
+                </div>
+                {ranking?.updatedAt && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Actualizado{' '}
+                    {new Date(ranking.updatedAt).toLocaleString('es-MX', {
+                      dateStyle: 'short',
+                      timeStyle: 'short',
+                    })}
+                  </p>
+                )}
+              </div>
+
+              {rankingLoading ? (
+                <div className="space-y-2">
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : !ranking?.entries?.length ? (
+                <Card>
+                  <CardContent className="p-4 text-sm text-muted-foreground text-center">
+                    El ranking se publicará pronto.
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="p-0 divide-y divide-border/60">
+                    {ranking.entries.map((e) => (
+                      <div
+                        key={e.id}
+                        className="flex items-center gap-3 px-4 py-2.5"
+                      >
+                        <span className="w-7 shrink-0 text-center text-sm font-semibold tabular-nums text-muted-foreground">
+                          {e.rank}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">
+                            {e.name}{' '}
+                            <span className="font-normal text-muted-foreground">
+                              ({e.code})
+                            </span>
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-sm font-semibold tabular-nums text-leaf-dark">
+                          {e.score}
+                        </span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </section>
           </FadeIn>
 
           <FadeIn delay={0.15}>
@@ -95,27 +178,6 @@ export default function HomePage() {
               </Card>
             </Link>
           </FadeIn>
-
-          {/* Oculto por ahora: calendario de actividades
-          <FadeIn delay={0.22}>
-            <a href={ACTIVIDADES_URL} className="block group" target="_blank" rel="noreferrer">
-              <Card className="transition-all duration-300 hover:border-leaf/40 hover:shadow-md hover:shadow-leaf/10 group-hover:-translate-y-0.5">
-                <CardContent className="p-5 flex items-center gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-leaf/10 border border-leaf/25">
-                    <CalendarDays className="h-5 w-5 text-leaf-dark" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="font-semibold mb-0.5">Calendario de actividades</h2>
-                    <p className="text-xs text-muted-foreground">
-                      Mira las próximas actividades que tenemos para ti
-                    </p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-leaf-dark group-hover:translate-x-1 transition-all" />
-                </CardContent>
-              </Card>
-            </a>
-          </FadeIn>
-          */}
 
           <FadeIn delay={0.3}>
             <div className="text-center pt-2">

@@ -221,6 +221,19 @@ export interface RaffleTicket {
     code: string;
     fullName: string;
   };
+  /** Admin que generó el boleto (auditoría). */
+  createdBy?: {
+    id: string;
+    username: string;
+    name: string;
+  } | null;
+}
+
+export interface RaffleBulkResult {
+  created: number;
+  quantityPerCode: number;
+  codes: number;
+  tickets: RaffleTicket[];
 }
 
 export interface RaffleLookupResult {
@@ -272,5 +285,31 @@ export interface WalletPassAdminItem {
     code: string;
     fullName: string;
   };
+}
+
+export interface ParticipaYaEntry {
+  id: string;
+  rank: number;
+  code: string;
+  name: string;
+  fullName: string;
+  score: number;
+  updatedAt: string;
+  participantId: string;
+}
+
+export interface ParticipaYaRanking {
+  title: string;
+  updatedAt: string | null;
+  count: number;
+  entries: ParticipaYaEntry[];
+}
+
+export interface ParticipaYaWhatsappStatus {
+  configured: boolean;
+  connected: boolean;
+  hasQr: boolean;
+  lastError: string | null;
+  cronHint: string;
 }
 
