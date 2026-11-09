@@ -196,24 +196,30 @@ export class ParticipaYaService implements OnModuleInit, OnModuleDestroy {
   }
 
   async whatsappStatus() {
+    const wasapUrl = this.wasap.configuredUrl();
     if (!this.wasap.configured()) {
       return {
         configured: false,
         connected: false,
         hasQr: false,
+        wasapUrl,
         lastError: 'WASAP_URL / WASAP_INTERNAL_TOKEN no configurados',
         cronHint: this.cronHint(),
       };
     }
     try {
       const s = await this.wasap.status();
-      return { configured: true, ...s, cronHint: this.cronHint() };
+      return { configured: true, wasapUrl, ...s, cronHint: this.cronHint() };
     } catch (err) {
+      const http = err as { message?: string | string[]; response?: { message?: string | string[] } };
+      const raw = http.response?.message ?? http.message ?? (err as Error).message;
+      const lastError = Array.isArray(raw) ? raw.join(', ') : String(raw);
       return {
         configured: true,
         connected: false,
         hasQr: false,
-        lastError: (err as Error).message,
+        wasapUrl,
+        lastError,
         cronHint: this.cronHint(),
       };
     }
