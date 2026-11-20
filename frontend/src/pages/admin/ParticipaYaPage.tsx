@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
+  ClipboardCopy,
   Loader2,
   Plus,
   RefreshCw,
@@ -9,6 +10,7 @@ import {
   Trophy,
   Wifi,
   WifiOff,
+  QrCode,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layout/AdminLayout';
@@ -18,8 +20,39 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge, Skeleton } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { participaYaApi, getApiErrorMessage } from '@/services/api';
 import type { ParticipaYaEntry, ParticipaYaWhatsappStatus } from '@/types';
+
+/** Mismo texto que envía wasap (top 10) para pegar a mano si WhatsApp falla. */
+function buildRankingClipboardText(entries: ParticipaYaEntry[], limit = 10) {
+  const today = new Date().toLocaleDateString('es-MX', {
+    timeZone: 'America/Mexico_City',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const intro = [
+    '🏆 Participa Ya',
+    '',
+    `Este es el ranking al día de hoy (${today}).`,
+    'Top 10 de quienes más nombres han registrado. ¡Sigan así!',
+    '',
+  ].join('\n');
+
+  const top = entries.slice(0, limit);
+  if (!top.length) {
+    return `${intro}Todavía no hay registros. ¡Anímate a participar!`;
+  }
+
+  const lines = top.map((e) => `${e.rank}. ${e.name} (${e.code}) · ${e.score}`);
+  return [
+    intro + lines.join('\n'),
+    '',
+    '¿Quieres subir? Sigue sumando nombres y mira el ranking en lrjasmerida.me',
+  ].join('\n');
+}
 
 export default function ParticipaYaPage() {
   const [entries, setEntries] = useState<ParticipaYaEntry[]>([]);
@@ -30,6 +63,8 @@ export default function ParticipaYaPage() {
   const [wa, setWa] = useState<ParticipaYaWhatsappStatus | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
 
   const loadRanking = useCallback(() => {
     setLoading(true);
@@ -116,6 +151,31 @@ export default function ParticipaYaPage() {
     }
   };
 
+  const handleCopyRanking = async () => {
+    const text = buildRankingClipboardText(entries);
+    setCopying(true);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      toast.success('Ranking copiado al portapapeles');
+    } catch {
+      toast.error('No se pudo copiar el ranking');
+    } finally {
+      setCopying(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <PageTransition>
@@ -128,9 +188,24 @@ export default function ParticipaYaPage() {
                   Ranking del concurso y vínculo de WhatsApp
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
                 <Button variant="outline" size="icon" onClick={loadRanking} aria-label="Recargar">
                   <RefreshCw className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleCopyRanking}
+                  disabled={copying || loading}
+                  className="gap-2"
+                  title="Genera el top 10 y lo copia para pegarlo en el canal a mano"
+                >
+                  {copying ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ClipboardCopy className="h-4 w-4" />
+                  )}
+                  <span className="hidden sm:inline">Copiar ranking</span>
+                  <span className="sm:hidden">Copiar</span>
                 </Button>
                 <Button
                   onClick={handleSendNow}
@@ -152,11 +227,10 @@ export default function ParticipaYaPage() {
                 </Button>
               </div>
             </div>
-            {!wa?.connected && (
-              <p className="text-xs text-muted-foreground mt-2">
-                El envío manual se activa cuando WhatsApp esté conectado (escanea el QR abajo).
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground mt-2">
+              Si wasap falla, usa <span className="font-medium text-foreground">Copiar ranking</span>{' '}
+              y pégalo en el canal. El envío automático solo funciona con WhatsApp conectado.
+            </p>
           </FadeIn>
 
           <FadeIn delay={0.05}>
@@ -284,6 +358,29 @@ export default function ParticipaYaPage() {
                     Reconectar
                   </Button>
                   <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setResetOpen(true)}
+                    className="gap-2 text-destructive hover:text-destructive"
+                  >
+                    <QrCode className="h-3.5 w-3.5" />
+                    Nuevo QR
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyRanking}
+                    disabled={copying || loading}
+                    className="gap-2"
+                  >
+                    {copying ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ClipboardCopy className="h-3.5 w-3.5" />
+                    )}
+                    Copiar ranking
+                  </Button>
+                  <Button
                     size="sm"
                     onClick={handleSendNow}
                     disabled={sending || !wa?.connected}
@@ -300,6 +397,39 @@ export default function ParticipaYaPage() {
               </CardContent>
             </Card>
           </FadeIn>
+
+          <ConfirmDialog
+            open={resetOpen}
+            onOpenChange={setResetOpen}
+            title="Eliminar sesión de WhatsApp"
+            description="Se cierra el vínculo actual y se genera un QR nuevo. Tendrás que escanearlo otra vez desde el celular."
+            confirmLabel="Eliminar y generar QR"
+            onConfirm={async () => {
+              toast.message('Borrando sesión…');
+              const s = await participaYaApi.whatsappResetSession();
+              setWa(s);
+              // El QR puede tardar un poco en aparecer
+              for (let i = 0; i < 6; i++) {
+                await new Promise((r) => setTimeout(r, 1000));
+                const st = await participaYaApi.whatsappStatus();
+                setWa(st);
+                if (st.hasQr && !st.connected) {
+                  const qr = await participaYaApi.whatsappQr();
+                  if (qr.dataUrl) {
+                    setQrDataUrl(qr.dataUrl);
+                    toast.success('QR listo: escanéalo con WhatsApp');
+                    return;
+                  }
+                }
+                if (st.connected) {
+                  setQrDataUrl(null);
+                  toast.success('WhatsApp conectado');
+                  return;
+                }
+              }
+              toast.message('Sesión borrada. Pulsa Actualizar estado si aún no ves el QR.');
+            }}
+          />
 
           <FadeIn delay={0.15}>
             {loading ? (
