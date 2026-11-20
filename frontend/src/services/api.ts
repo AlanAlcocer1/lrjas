@@ -229,6 +229,10 @@ export const participaYaApi = {
     api
       .post<ParticipaYaWhatsappStatus>('/participa-ya/whatsapp/reconnect')
       .then((r) => r.data),
+  whatsappResetSession: () =>
+    api
+      .post<ParticipaYaWhatsappStatus>('/participa-ya/whatsapp/reset-session')
+      .then((r) => r.data),
   sendRankingNow: () =>
     api
       .post<{ ok: boolean; message: string }>('/participa-ya/whatsapp/send-now')
