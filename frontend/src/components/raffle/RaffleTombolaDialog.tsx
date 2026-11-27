@@ -37,6 +37,8 @@ export function RaffleTombolaDialog({ open, onOpenChange }: RaffleTombolaDialogP
   const [active, setActive] = useState(false);
   const [lastWinner, setLastWinner] = useState<RaffleTicket | null>(null);
   const pendingWinnerRef = useRef<RaffleTicket | null>(null);
+  /** IDs descartados en esta sesión (ganador + todos sus boletos). */
+  const discardedIdsRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -49,6 +51,7 @@ export function RaffleTombolaDialog({ open, onOpenChange }: RaffleTombolaDialogP
     setBusy(false);
     setArming(false);
     pendingWinnerRef.current = null;
+    discardedIdsRef.current = [];
     setRoundKey((k) => k + 1);
 
     raffleApi
@@ -68,12 +71,9 @@ export function RaffleTombolaDialog({ open, onOpenChange }: RaffleTombolaDialogP
     };
   }, [open]);
 
-  // `pool` ya excluye ganadores (y el resto de boletos de esos códigos) de esta sesión
+  // `pool` ya excluye ganadores (y el resto de boletos de esos códigos) de esta sesión.
+  // Usamos solo `excludeIds` (compatible con API actual en prod).
   const remaining = pool.length;
-  const drawnIds = drawn.map((d) => d.ticket.id);
-  const excludedParticipantIds = [
-    ...new Set(drawn.map((d) => d.ticket.participant.id).filter(Boolean)),
-  ];
 
   const startRound = async () => {
     if (busy || arming || remaining <= 0) return;
@@ -81,8 +81,7 @@ export function RaffleTombolaDialog({ open, onOpenChange }: RaffleTombolaDialogP
     setLastWinner(null);
     try {
       const result = await raffleApi.draw({
-        excludeIds: drawnIds,
-        excludeParticipantIds: excludedParticipantIds,
+        excludeIds: discardedIdsRef.current,
       });
       pendingWinnerRef.current = result.winner;
       setFinalValue(result.winner.folioLabel);
@@ -115,9 +114,11 @@ export function RaffleTombolaDialog({ open, onOpenChange }: RaffleTombolaDialogP
     // Fuera del bombo de ESTA sesión: el ganador y TODOS sus boletos.
     // No se borran de la BD; al cerrar/abrir el modal se recargan.
     const winnerParticipantId = winner.participant.id;
-    const removedCount = pool.filter(
-      (t) => t.participant.id === winnerParticipantId,
-    ).length;
+    const toDiscard = pool.filter((t) => t.participant.id === winnerParticipantId);
+    const removedCount = toDiscard.length;
+    discardedIdsRef.current = [
+      ...new Set([...discardedIdsRef.current, ...toDiscard.map((t) => t.id)]),
+    ];
     setLastWinner(winner);
     toast.success(
       removedCount > 1

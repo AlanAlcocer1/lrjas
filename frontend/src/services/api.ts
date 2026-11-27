@@ -182,18 +182,11 @@ export const raffleApi = {
         params: date ? { date } : undefined,
       })
       .then((r) => r.data),
-  draw: (opts?: {
-    date?: string;
-    excludeIds?: string[];
-    excludeParticipantIds?: string[];
-  }) =>
+  draw: (opts?: { date?: string; excludeIds?: string[] }) =>
     api
       .post<RaffleDrawResult>('/raffle-tickets/draw', {
         ...(opts?.date ? { date: opts.date } : {}),
         ...(opts?.excludeIds?.length ? { excludeIds: opts.excludeIds } : {}),
-        ...(opts?.excludeParticipantIds?.length
-          ? { excludeParticipantIds: opts.excludeParticipantIds }
-          : {}),
       })
       .then((r) => r.data),
   remove: (id: string) =>
