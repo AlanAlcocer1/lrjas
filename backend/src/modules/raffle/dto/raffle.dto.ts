@@ -49,4 +49,13 @@ export class DrawRaffleDto {
   @IsArray()
   @IsString({ each: true })
   excludeIds?: string[];
+
+  /**
+   * Participantes que ya ganaron en esta sesión: se descartan TODOS sus boletos
+   * del bombo (sin borrarlos de la BD).
+   */
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  excludeParticipantIds?: string[];
 }

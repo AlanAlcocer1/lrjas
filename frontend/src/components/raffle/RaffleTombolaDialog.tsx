@@ -68,16 +68,22 @@ export function RaffleTombolaDialog({ open, onOpenChange }: RaffleTombolaDialogP
     };
   }, [open]);
 
-  // `pool` ya excluye los sorteados de esta sesión
+  // `pool` ya excluye ganadores (y el resto de boletos de esos códigos) de esta sesión
   const remaining = pool.length;
   const drawnIds = drawn.map((d) => d.ticket.id);
+  const excludedParticipantIds = [
+    ...new Set(drawn.map((d) => d.ticket.participant.id).filter(Boolean)),
+  ];
 
   const startRound = async () => {
     if (busy || arming || remaining <= 0) return;
     setArming(true);
     setLastWinner(null);
     try {
-      const result = await raffleApi.draw({ excludeIds: drawnIds });
+      const result = await raffleApi.draw({
+        excludeIds: drawnIds,
+        excludeParticipantIds: excludedParticipantIds,
+      });
       pendingWinnerRef.current = result.winner;
       setFinalValue(result.winner.folioLabel);
       setActive(true);
@@ -106,11 +112,20 @@ export function RaffleTombolaDialog({ open, onOpenChange }: RaffleTombolaDialogP
       return;
     }
 
-    // Solo fuera del bombo de ESTA sesión (el modal). No se borra de la BD.
+    // Fuera del bombo de ESTA sesión: el ganador y TODOS sus boletos.
+    // No se borran de la BD; al cerrar/abrir el modal se recargan.
+    const winnerParticipantId = winner.participant.id;
+    const removedCount = pool.filter(
+      (t) => t.participant.id === winnerParticipantId,
+    ).length;
     setLastWinner(winner);
-    toast.success(`¡Ganó el boleto #${winner.folioLabel}!`);
+    toast.success(
+      removedCount > 1
+        ? `¡Ganó #${winner.folioLabel}! Se descartan ${removedCount} boletos de ${winner.participant.code} en esta tómbola`
+        : `¡Ganó el boleto #${winner.folioLabel}!`,
+    );
     setDrawn((prev) => [{ ticket: winner, at: Date.now() }, ...prev]);
-    setPool((prev) => prev.filter((t) => t.id !== winner.id));
+    setPool((prev) => prev.filter((t) => t.participant.id !== winnerParticipantId));
     pendingWinnerRef.current = null;
     setBusy(false);
     setActive(false);
@@ -126,8 +141,8 @@ export function RaffleTombolaDialog({ open, onOpenChange }: RaffleTombolaDialogP
             Tómbola de rifa
           </DialogTitle>
           <DialogDescription>
-            Máquina de 5 dígitos (folio). Mientras el modal esté abierto es una sesión: los ganadores
-            salen del bombo, pero los boletos siguen en la base. Al cerrar y abrir de nuevo se
+            Mientras el modal esté abierto es una sesión: si sale un boleto tuyo, se descartan
+            todos tus boletos del bombo (no se borran de la base). Al cerrar y abrir de nuevo se
             recargan todos.
           </DialogDescription>
         </DialogHeader>

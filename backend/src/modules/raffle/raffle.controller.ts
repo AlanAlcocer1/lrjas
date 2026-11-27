@@ -56,6 +56,7 @@ export class RaffleController {
     return this.raffleService.draw({
       date: body?.date,
       excludeIds: body?.excludeIds,
+      excludeParticipantIds: body?.excludeParticipantIds,
     });
   }
 
