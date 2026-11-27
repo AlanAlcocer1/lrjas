@@ -241,15 +241,26 @@ export class RaffleService {
 
   /**
    * Sorteo uniforme: cada boleto tiene la misma probabilidad (crypto.randomInt).
-   * Opcionalmente filtra por día (México) y excluye IDs ya sorteados en la sesión.
+   * Opcionalmente filtra por día (México), boletos ya salidos y participantes
+   * que ya ganaron en la sesión (se descartan todos sus boletos del bombo).
    */
-  async draw(opts: { date?: string; excludeIds?: string[] } = {}) {
+  async draw(
+    opts: {
+      date?: string;
+      excludeIds?: string[];
+      excludeParticipantIds?: string[];
+    } = {},
+  ) {
     const where: Prisma.RaffleTicketWhereInput = {
       ...this.buildWhere({ date: opts.date }),
     };
     const excludeIds = (opts.excludeIds ?? []).filter(Boolean);
+    const excludeParticipantIds = (opts.excludeParticipantIds ?? []).filter(Boolean);
     if (excludeIds.length > 0) {
       where.id = { notIn: excludeIds };
+    }
+    if (excludeParticipantIds.length > 0) {
+      where.participantId = { notIn: excludeParticipantIds };
     }
 
     const count = await this.prisma.raffleTicket.count({ where });
